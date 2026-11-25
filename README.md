@@ -2,7 +2,7 @@
 
 *Your limits. In sight.*
 
-**A prop-firm rule guard on Even Realities G2 smart glasses.** It watches your trading rules during a live session, so one heated moment can't cost you a funded account.
+**A prop-firm rule guard on Even Realities G2 smart glasses.** It keeps account loss limits visible during a session and checks proposed trades against them before submission.
 
 The implementation is in `app/`, `server/`, and `shared/`. The full product scope remains in `PLAN.md`; provider research is in `research/`.
 

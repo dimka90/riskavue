@@ -74,4 +74,12 @@ Pasted commands are now recognized by message text even when Telegram supplies n
 
 Published the secret-scanned source to `dimka90/riskavue`. All 58 tests, the production build, both browser workflows, and official simulator input checks passed. Refreshed the captioned simulator video and local `.ehpk` package with current display text and provider verification labels. The package still targets localhost and must be rebuilt for a deployed HTTPS origin.
 
-A physical browser microphone test was opened but timed out without an audio submission; it is not marked verified. Railway CLI is still unauthorized. A Docker deployment-image build is being checked locally.
+A physical browser microphone test was opened but timed out without an audio submission; it is not marked verified. Railway CLI is still unauthorized. The first Docker build hit an npm registry read timeout. The retry succeeded; the container smoke test passed locally and on GitHub. It verifies UI serving, unauthorized-request rejection, origin rejection, and lock persistence across a server restart.
+
+## Break-even attempt and CI — 2026-11-25
+
+Two protected Binance Demo fixtures waited for a valid break-even trigger (two minutes, then ten minutes). Neither reached the required price, so replacement execution is **not verified**. Both runs closed the fixture and reconciled zero positions and orders; the second cleanup completed at 09:18:12 UTC. Receipt: `.artifacts/binance-breakeven-verification.json`. Unit tests still verify replacement ordering and preservation of the original stop on replacement failure.
+
+GitHub CI caught a Node/ICU formatting difference (`UTC+0` rather than `UTC`). Normalizing zero offsets fixed it. All 58 tests and the production build passed on GitHub: https://github.com/dimka90/riskavue/actions/runs/45583934685. The updated local package is attached to https://github.com/dimka90/riskavue/releases/tag/v0.1.0-preview.
+
+The complete GitHub check, including Docker build and smoke test, passed: https://github.com/dimka90/riskavue/actions/runs/45584774881. A separate Binance-mode browser session at local port 3005 also displayed a fresh real demo account with zero orders and positions; evidence is in `.artifacts/binance/live-account.json` and `live-account.png`. The Telegram bot remains on its preserved paper session.
