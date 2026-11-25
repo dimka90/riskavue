@@ -76,7 +76,11 @@ Telegram commands: `/status`, `/rules`, `/lock`, `/review`, `/pair CODE`, `/buy 
 
 ## Deployment and packaging
 
-Use the **repository root** for deployment. `Dockerfile` and `railway.json` are included. Set `HOST=0.0.0.0`, a strong `APP_TOKEN`, the HTTPS `APP_ORIGIN`, provider keys, and a persistent volume mounted at `/data`. One server instance owns the SQLite database and Telegram polling. The public repository is [dimka90/riskavue](https://github.com/dimka90/riskavue). Railway deployment still requires account login.
+Use the **repository root** for deployment. `Dockerfile` and `railway.json` are included. Set `HOST=0.0.0.0`, a strong `APP_TOKEN`, the HTTPS `APP_ORIGIN`, provider keys, and a persistent volume mounted at `/data`. One server instance owns the SQLite database and Telegram polling. The public repository is [dimka90/riskavue](https://github.com/dimka90/riskavue). Railway deployment uses the GitHub project-token workflow described below.
+
+GitHub deployment follows the 10kobo setup: the `Deploy to Railway` workflow runs after `Check` succeeds on a push to `main`, and deploys that checked commit. Create a Riskavue service named `riskavue`, then add a project token for its environment to the GitHub repository secret `RAILWAY_TOKEN`. If the service has a different name, set the repository variable `RAILWAY_SERVICE`. The workflow uses Railway CLI 5.2.0, matching the existing 10kobo deployment. Local CLI login is not required for this route.
+
+Before the first deployment, set the service variables listed above and attach the `/data` volume. Keep a single replica. Move Telegram polling to the deployed server only when it is ready, so the local and deployed bots do not compete for updates.
 
 ```bash
 npm run configure:manifest   # writes APP_ORIGIN and matching WebSocket origin to app/app.json

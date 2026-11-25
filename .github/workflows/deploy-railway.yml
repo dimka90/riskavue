@@ -1,0 +1,36 @@
+name: Deploy to Railway
+on:
+  workflow_run:
+    workflows: [Check]
+    branches: [main]
+    types: [completed]
+concurrency:
+  group: deploy-railway
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check deployment token
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo 'Add the Riskavue project token as the RAILWAY_TOKEN repository secret.'
+            exit 1
+          fi
+      - run: npm install -g @railway/cli@5.2.0
+      - name: Deploy checked code
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || 'riskavue' }}
+        run: railway up --service="$RAILWAY_SERVICE" --detach
