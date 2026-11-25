@@ -208,8 +208,8 @@ export class Service extends EventEmitter {
         if (notify) this.emit('warning', `${lockedText(this.snapshot())}\n${reason}`);
         return true;
     }
-    execute(id: string): Promise<Action> { const task = this.serial.then(() => this.perform(id)); this.serial = task.catch(() => { }); return task; }
-    async perform(id: string) {
+    execute(id: string, confirmation?: { heldMs: number }): Promise<Action> { const task = this.serial.then(() => this.perform(id, confirmation)); this.serial = task.catch(() => { }); return task; }
+    async perform(id: string, confirmation?: { heldMs: number }) {
         let a = this.store.action(id);
         if (!a)
             throw new Error('Action not found');
@@ -236,15 +236,17 @@ export class Service extends EventEmitter {
             else if (a.kind === 'override') {
                 if (!this.lock || this.lock.hard)
                     throw new Error('Hard locks cannot be overridden');
-                if (typeof a.payload.reason !== 'string' || a.payload.reason.length < 3 || a.payload.voiceVerified !== true)
-                    throw new Error('Hold and speak a reason first');
+                if (typeof a.payload.reason !== 'string' || a.payload.reason.length < 3 || (a.payload.voiceVerified !== true && a.payload.inputMethod !== 'touch'))
+                    throw new Error('Choose or speak a reason first');
+                if (a.payload.inputMethod === 'touch' && (Date.now() - a.createdAt < 3000 || !confirmation || confirmation.heldMs < 3000))
+                    throw new Error('Silent override requires a deliberate 3-second hold');
                 this.store.log('override', a.payload.reason);
                 this.lock = null;
                 this.store.set('lock', null);
                 // Keep the audit counters intact; the next additional loss/entry can lock again.
                 if (this.baseline)
                     this.store.set('soft-waiver', { day: this.baseline.day, losses: this.rules.lossMode === 'total' ? this.baseline.losses : this.baseline.streak, trades: this.baseline.trades });
-                result = 'Soft lock overridden; spoken reason recorded';
+                result = 'Soft lock overridden; reason recorded';
             }
             else {
                 if (this.snapshot().stale)

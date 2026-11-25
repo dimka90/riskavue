@@ -83,3 +83,9 @@ Two protected Binance Demo fixtures waited for a valid break-even trigger (two m
 GitHub CI caught a Node/ICU formatting difference (`UTC+0` rather than `UTC`). Normalizing zero offsets fixed it. All 58 tests and the production build passed on GitHub: https://github.com/dimka90/riskavue/actions/runs/45583934685. The updated local package is attached to https://github.com/dimka90/riskavue/releases/tag/v0.1.0-preview.
 
 The complete GitHub check, including Docker build and smoke test, passed: https://github.com/dimka90/riskavue/actions/runs/45584774881. A separate Binance-mode browser session at local port 3005 also displayed a fresh real demo account with zero orders and positions; evidence is in `.artifacts/binance/live-account.json` and `live-account.png`. The Telegram bot remains on its preserved paper session.
+
+## Silent glasses controls — 2026-11-25
+
+Added a tap/swipe menu for locking, new trades, position close/break-even, pending-entry cancellation, close-all, reviews, rule viewing and lock details. Soft overrides require a selected reason, a deliberate three-second hold and server validation; hard locks remain blocked. No microphone is opened for menu actions.
+
+65 unit/integration tests pass. Seven browser workflows cover existing behavior plus silent lock/override, cancellation/close and digit-by-digit trade entry with separate confirmation. The official simulator passed tap/swipe/hold interaction checks; screenshots were inspected for readability on the actual 576×288 framebuffer. Evidence: `.artifacts/silent-controls/`. No live account actions were used in these tests. Physical G2 testing remains outstanding.

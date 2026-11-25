@@ -95,3 +95,71 @@ test('successful pairing replaces the old sign-in warning', async ({ page, reque
     await expect(page.locator('#notice')).toHaveText('Paired successfully.');
     await expect(page.locator('#notice')).not.toHaveClass(/error/);
 });
+
+test('glasses controls lock and deliberately override without microphone input', async ({ page, request }) => {
+    const base = process.env.TEST_API ?? 'http://127.0.0.1:3001/api';
+    expect((await (await request.get(base + '/state')).json()).account.mode).toBe('paper');
+    await request.post(base + '/paper/reset', { data: {} });
+    const voiceRequests: string[] = []; page.on('request', r => { if (r.url().endsWith('/voice')) voiceRequests.push(r.url()); });
+    await page.goto('/'); await expect(page.locator('#tap')).toHaveText('Tap for actions');
+    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('> Lock session');
+    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('LOCK THIS SESSION?');
+    expect((await (await request.get(base + '/state')).json()).lock).toBeNull();
+    await page.locator('#tap').click(); await expect(page.locator('#connection')).toHaveText('Session locked');
+    await page.locator('#tap').click(); await page.locator('#tap').click();
+    for (let i = 0; i < 7; i++) await page.locator('#next').click();
+    await expect(page.locator('#display')).toContainText('> Override soft lock');
+    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('CHOOSE YOUR REASON');
+    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('Hold 3 seconds');
+    await page.locator('#tap').click(); expect((await (await request.get(base + '/state')).json()).lock).toBeTruthy();
+    await page.locator('#voice').focus(); await page.keyboard.down('Space'); await page.waitForTimeout(200); await page.keyboard.up('Space');
+    expect((await (await request.get(base + '/state')).json()).lock).toBeTruthy();
+    await page.keyboard.down('Space'); await page.waitForTimeout(3200); await page.keyboard.up('Space');
+    await expect(page.locator('#connection')).toHaveText('Connected');
+    expect(voiceRequests).toEqual([]);
+});
+
+test('silent menu can cancel an entry and close a position after confirmation', async ({ page, request }) => {
+    const base = process.env.TEST_API ?? 'http://127.0.0.1:3001/api';
+    expect((await (await request.get(base + '/state')).json()).account.mode).toBe('paper');
+    await request.post(base + '/paper/reset', { data: {} }); await request.post(base + '/paper/seed', { data: {} });
+    const seeded = await (await request.get(base + '/state')).json();
+    for (const a of seeded.actions.filter((a: any) => a.status === 'pending')) await request.post(base + `/actions/${a.id}/dismiss`, { data: {} });
+    await page.goto('/'); await expect(page.locator('#tap')).toHaveText('Tap for actions');
+    await page.locator('#tap').click(); for (let i = 0; i < 3; i++) await page.locator('#next').click();
+    await expect(page.locator('#display')).toContainText('> Cancel pending entry'); await page.locator('#tap').click(); await page.locator('#tap').click();
+    await expect(page.locator('#display')).toContainText('Cancel ETHUSDT entry?'); await page.locator('#tap').click();
+    await expect.poll(async () => (await (await request.get(base + '/state')).json()).account.orders.length).toBe(0);
+    await page.locator('#tap').click(); await page.locator('#tap').click(); await page.locator('#next').click(); await page.locator('#next').click();
+    await expect(page.locator('#display')).toContainText('> Manage positions'); await page.locator('#tap').click(); await page.locator('#tap').click();
+    await expect(page.locator('#display')).toContainText('> Close position'); await page.locator('#tap').click();
+    await expect(page.locator('#display')).toContainText('Close BTCUSDT position?');
+    expect((await (await request.get(base + '/state')).json()).account.positions.length).toBe(1);
+    await page.locator('#tap').click(); await expect.poll(async () => (await (await request.get(base + '/state')).json()).account.positions.length).toBe(0);
+});
+
+test('a trade can be entered and confirmed using only glasses buttons', async ({ page, request }) => {
+    const base = process.env.TEST_API ?? 'http://127.0.0.1:3001/api';
+    expect((await (await request.get(base + '/state')).json()).account.mode).toBe('paper');
+    await request.post(base + '/paper/reset', { data: {} }); await page.goto('/');
+    await expect(page.locator('#tap')).toHaveText('Tap for actions');
+    async function choose(label: string) {
+        for (let i = 0; i < 12; i++) {
+            if ((await page.locator('#display').innerText()).split('\n').includes('> ' + label)) { await page.locator('#tap').click(); return; }
+            await page.locator('#next').click();
+        }
+        throw new Error('Missing menu entry: ' + label);
+    }
+    await page.locator('#tap').click(); await choose('New trade'); await choose('Limit: 0');
+    for (const digit of '06000000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap').click(); }
+    await choose('Stop: 0');
+    for (const digit of '05900000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap').click(); }
+    expect((await (await request.get(base + '/state')).json()).account.orders.length).toBe(0);
+    await choose('Check trade against rules');
+    await expect(page.locator('#display')).toContainText('CONFIRM');
+    expect((await (await request.get(base + '/state')).json()).account.orders.length).toBe(0);
+    await page.locator('#tap').click();
+    await expect.poll(async () => (await (await request.get(base + '/state')).json()).account.orders.length).toBe(1);
+    const order = (await (await request.get(base + '/state')).json()).account.orders[0];
+    expect(order).toMatchObject({ symbol: 'BTCUSDT', side: 'BUY', price: 60000, stop: 59000, qty: .001 });
+});

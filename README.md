@@ -65,6 +65,16 @@ Voice phrases: **“close all”**, **“lock me”**, **“why locked”**, **�
 
 Telegram commands: `/status`, `/rules`, `/lock`, `/review`, `/pair CODE`, `/buy 0.01 BTC 60000 stop 59000`, and the corresponding `/sell`. Only the configured owner can complete pairing or run trading commands. Pairing is unnecessary for local paper use.
 
+## Silent controls on G2
+
+Voice is optional. Tap from a session view to open Actions, swipe up/down to choose, then tap to select. Back returns to the parent menu; Back to session closes it. Trades and account changes require a separate confirmation, and swiping dismisses a pending confirmation.
+
+The menu includes session locking and lock details, new trade entry, position closing, break-even stops, pending-entry cancellation, close-all, session review, and rule viewing. New trades use a digit editor: swipe to change the highlighted digit, tap to advance, then choose Check trade against rules. Editing digits sends no order.
+
+For a soft-lock override, choose a reason, then hold the control for three seconds and release. A tap or early release does not override. The server requires hold confirmation and a minimum delay; hard locks remain non-overridable. Hold-to-speak remains available outside the menu. Double-tap exits the G2 app.
+
+The companion buttons use the same handlers as glasses events: Tap for actions, arrows to choose, Tap to select, then Tap to confirm. The hold button changes to Hold 3 seconds to override when appropriate.
+
 ## Execution boundaries
 
 - **Through Riskavue:** validated ticket, server-side risk check, expiring confirmation, fresh risk check, then demo order submission. Entries are post-only limit orders; crossing the market is rejected. One entry/position per symbol is supported. Protective-stop placement is a separate provider request; a failed stop triggers a cancellation attempt and an explicit uncertain result, never a protection guarantee.
@@ -87,7 +97,7 @@ npm run configure:manifest   # writes APP_ORIGIN and matching WebSocket origin t
 npm run pack                # embeds APP_ORIGIN as the API origin and builds riskavue.ehpk
 ```
 
-For direct Vite builds, `VITE_API_ORIGIN` can select an explicit backend; otherwise the app uses its current origin. `npm run pack` automatically embeds `APP_ORIGIN` so a packaged WebView connects to the server rather than looking for a local `/api`. The checked-in manifest targets local development. Set the real server origin and repackage before sideloading a deployed app. The browser UI and API are served from the same origin. Phone/G2 testing needs an accessible HTTPS deployment or a deliberately configured LAN origin; localhost on a phone is not this computer.
+For direct Vite builds, `VITE_API_ORIGIN` can select an explicit backend; otherwise the app uses its current origin. `npm run pack` automatically embeds `APP_ORIGIN` so a packaged WebView connects to the server rather than looking for a local `/api`. The checked-in manifest targets https://riskavue.up.railway.app. Set the real server origin and repackage before sideloading a deployed app. The browser UI and API are served from the same origin. Phone/G2 testing needs an accessible HTTPS deployment or a deliberately configured LAN origin; localhost on a phone is not this computer.
 
 ## Submission provenance
 

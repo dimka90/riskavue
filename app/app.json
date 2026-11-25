@@ -10,8 +10,8 @@
       "name": "network",
       "desc": "Connects to your Riskavue server for account risk and confirmed demo actions.",
       "whitelist": [
-        "http://127.0.0.1:3001",
-        "ws://127.0.0.1:3001"
+        "https://riskavue.up.railway.app",
+        "wss://riskavue.up.railway.app"
       ]
     },
     {

@@ -1,4 +1,5 @@
 import './style.css';
+import { SilentControls } from './silent-controls.ts';
 import { enhanceTradeSelects } from './trade-select.ts';
 import { deadline, actionText } from '../../shared/session-text.ts';
 import type { Snapshot, Action, Preset, Rules } from '../../shared/types.ts';
@@ -18,7 +19,7 @@ $('app').innerHTML = `
 <div class="panel"><div class="panel-heading"><h2>Open positions</h2><span id="position-count" class="subtle">0</span></div><div id="positions" class="empty">No positions open.</div></div>
 <div class="panel"><div class="panel-heading"><h2>Pending entries</h2><span class="subtle">Stops stay protected</span></div><div id="orders" class="empty">No pending entries.</div></div>
 <div class="panel"><div class="panel-heading"><h2>Decisions, remembered</h2><button id="review" class="quiet">Generate AI review</button></div><p id="review-text" class="review-text">Your session review will appear here.</p><div id="decisions" class="timeline"></div></div></section>
-<aside><section class="glasses-panel"><div class="panel-heading"><h2>In your line of sight</h2><span id="g2" class="subtle">Browser preview</span></div><div class="display-frame"><pre id="display">Riskavue\nYour limits. In sight.\nConnecting...</pre></div><div class="glasses-controls"><button id="previous" aria-label="Previous glasses view">↑</button><button id="tap" class="tap">Tap to confirm</button><button id="next" aria-label="Next glasses view">↓</button></div><button id="voice" class="voice">Hold to speak</button><p class="hint">G2: swipe to browse · tap to act · double-tap to exit</p></section>
+<aside><section class="glasses-panel"><div class="panel-heading"><h2>In your line of sight</h2><span id="g2" class="subtle">Browser preview</span></div><div class="display-frame"><pre id="display">Riskavue\nYour limits. In sight.\nConnecting...</pre></div><div class="glasses-controls"><button id="previous" aria-label="Previous glasses view">↑</button><button id="tap" class="tap">Tap to confirm</button><button id="next" aria-label="Next glasses view">↓</button></div><button id="voice" class="voice">Hold to speak</button><p class="hint">G2: tap for actions · swipe to choose · voice optional</p></section>
 <section class="panel ticket-panel"><div class="panel-heading"><h2>Check a trade</h2><span class="subtle">Before it leaves</span></div><form id="ticket"><div class="form-row"><label>Market<select name="symbol"><option>BTCUSDT</option><option>ETHUSDT</option><option>SOLUSDT</option></select></label><label>Direction<select name="side"><option value="BUY">Long / buy</option><option value="SELL">Short / sell</option></select></label></div><label>Quantity<input name="qty" type="number" min="0.0001" step="any" value="0.01" required></label><div class="form-row"><label>Limit price<input name="entry" type="number" min="0.01" step="any" value="60000" required></label><label>Stop price<input name="stop" type="number" min="0.01" step="any" value="59000" required></label></div><button type="submit" class="primary-button">Check against my rules</button><p class="hint">Nothing is submitted until you confirm. Binance entries use post-only limits.</p></form><div id="confirmation"></div></section>
 <section class="panel"><div class="panel-heading"><h2>Your rules</h2><button id="edit-rules" class="quiet">Edit</button></div><div id="rule-summary" class="rule-summary"></div></section>
 <section class="panel"><h2>Connected tools</h2><div id="integrations" class="integrations"></div><button id="pair" class="quiet">Pair with Telegram</button></section>
@@ -29,6 +30,10 @@ $('app').innerHTML = `
 <dialog id="pair-dialog"><div class="panel-heading"><h2>Pair your glasses</h2><button data-close="pair-dialog" class="quiet">Close</button></div><p>Send this to your configured Telegram bot:</p><code id="pair-code"></code><p class="hint" id="pair-status">Code expires in five minutes.</p></dialog>`;
 function notify(text: string, error = false) { $('notice').textContent = text; $('notice').className = error ? 'notice error' : 'notice'; }
 enhanceTradeSelects($<HTMLFormElement>('ticket'));
+const silent = new SilentControls({ state: () => state, api, draw: () => renderGlasses(), select: a => { selected = a.id; void load().catch(e => notify(e.message, true)); }, view: next => { page = next; selected = undefined; render(); void load().catch(e => notify(e.message, true)); } });
+let overrideHold: { id: string; at: number } | undefined;
+let overrideTimer: ReturnType<typeof setTimeout> | undefined;
+
 async function api<T = any>(path: string, body?: unknown, raw = false): Promise<T> { const res = await fetch(`${backendOrigin}/api${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${token}`, ...(body !== undefined ? { 'Content-Type': raw ? 'application/octet-stream' : 'application/json' } : {}) }, body: body === undefined ? undefined : raw ? body as BodyInit : JSON.stringify(body) }); const result = await res.json(); if (!res.ok) {
     if (res.status === 401)
         ($('settings') as HTMLDialogElement).showModal();
@@ -79,18 +84,39 @@ function render() {
         $('clear-action').onclick = () => { selected = undefined; render(); };
     renderGlasses();
 }
-function renderGlasses() { if (!state)
-    return; const content = recording ? 'RISKAVUE / LISTENING\n\nSay a short command.\nRelease to finish.' : display(state, page, action()); $('display').textContent = content; bridge?.update(content); }
-async function confirm() { const a = action(); if (!a)
-    return; if (a.status !== 'pending') {
-    selected = undefined;
-    page = 'session';
-    render();
-    return;
-} const result = await api<Action>(`/actions/${a.id}/confirm`, {}); notify(result.result ?? 'Working...', result.status === 'failed' || result.status === 'unknown'); await load(); }
+function renderGlasses() {
+    if (!state) return;
+    const a = action(), fresh = !state.stale && Date.now() - state.account.at <= 5000;
+    const content = recording ? 'RISKAVUE / LISTENING\n\nSay a short command.\nRelease to finish.' : overrideHold ? `OVERRIDE SOFT LOCK?\n\n${a?.detail ?? ''}\n\n${Date.now() - overrideHold.at >= 3000 ? 'Release to confirm override.' : 'Keep holding for 3 seconds.'}\nRelease early to cancel.` : silent.active && fresh ? silent.text() : display(state, page, a);
+    $('display').textContent = content; bridge?.update(content);
+    $('tap').textContent = !fresh ? 'Waiting for connection' : silent.active ? 'Tap to select' : a?.status === 'pending' ? a.kind === 'override' && a.payload.inputMethod === 'touch' ? 'Hold below to override' : 'Tap to confirm' : a ? 'Back to session' : 'Tap for actions';
+    $<HTMLButtonElement>('tap').disabled = !fresh;
+    if (!recording) $('voice').textContent = a?.kind === 'override' && a.status === 'pending' && a.payload.inputMethod === 'touch' ? 'Hold 3 seconds to override' : 'Hold to speak (optional)';
+}
+async function confirm(held = false) {
+    if (!state || state.stale || Date.now() - state.account.at > 5000) return;
+    if (silent.active) { await silent.tap(); return; }
+    const a = action();
+    if (!a) { silent.open(); return; }
+    if (a.status !== 'pending') { selected = undefined; page = 'session'; render(); return; }
+    if (a.kind === 'override' && a.payload.inputMethod === 'touch' && !held) { notify('Hold the control for 3 seconds, then release to confirm this override.'); return; }
+    const result = await api<Action>(`/actions/${a.id}/confirm`, held ? { heldMs: 3000 } : {}); notify(result.result ?? 'Working...', result.status === 'failed' || result.status === 'unknown'); await load();
+}
+async function beginControlHold(g2 = false) {
+    if (silent.active) return;
+    const a = action();
+    if (a?.kind === 'override' && a.status === 'pending' && a.payload.inputMethod === 'touch') {
+        overrideHold = { id: a.id, at: Date.now() }; clearTimeout(overrideTimer); overrideTimer = setTimeout(renderGlasses, 3000); renderGlasses(); return;
+    }
+    await beginVoice(g2);
+}
+async function endControlHold(cancel = false) {
+    if (overrideHold) { const held = overrideHold; overrideHold = undefined; clearTimeout(overrideTimer); renderGlasses(); if (!cancel && action()?.id === held.id && Date.now() - held.at >= 3000) await confirm(true); return; }
+    await endVoice();
+}
 async function dismiss() { const a = action(); if (a)
     await api(`/actions/${a.id}/dismiss`, {}); selected = undefined; await load(); }
-async function navigate(delta: number) { if (action()?.status === 'pending')
+async function navigate(delta: number) { if (silent.active) { silent.move(delta); return; } if (action()?.status === 'pending')
     await dismiss();
 else
     selected = undefined; const pages: Page[] = ['session', 'positions', 'rules', 'review']; page = pages[(pages.indexOf(page) + delta + 4) % 4]; render(); }
@@ -184,26 +210,27 @@ async function endVoice() { if (!recording)
     offset += c.length;
 } const r = await api('/voice', data, true); notify(`Heard: ${r.text}${r.result.message ? ' · ' + r.result.message : ''}`); if (r.result.id)
     selected = r.result.id; await load(); }
-$('voice').onpointerdown = e => { e.preventDefault(); $('voice').setPointerCapture(e.pointerId); void beginVoice().catch(e => notify(e.message, true)); };
-$('voice').onpointerup = safe(endVoice);
-$('voice').onpointercancel = safe(endVoice);
+$('voice').onpointerdown = e => { e.preventDefault(); $('voice').setPointerCapture(e.pointerId); void beginControlHold().catch(e => notify(e.message, true)); };
+$('voice').onpointerup = safe(endControlHold);
+$('voice').onpointercancel = safe(() => endControlHold(true));
 $('voice').onkeydown = e => { if (e.code === 'Space' && !e.repeat) {
     e.preventDefault();
-    void beginVoice().catch(e => notify(e.message, true));
+    void beginControlHold().catch(e => notify(e.message, true));
 } };
 $('voice').onkeyup = e => { if (e.code === 'Space')
-    void endVoice().catch(e => notify(e.message, true)); };
+    void endControlHold().catch(e => notify(e.message, true)); };
 void glasses(event => { if (event === 'active') {
     g2Active = true;
     return;
 } if (event === 'inactive') {
+    overrideHold = undefined; clearTimeout(overrideTimer);
     g2Active = false;
     return;
 } if (event === 'tap')
     void confirm().catch(e => notify(e.message, true)); if (event === 'up' || event === 'down')
     void navigate(event === 'up' ? -1 : 1).catch(e => notify(e.message, true)); if (event === 'hold')
-    void beginVoice(true).catch(e => notify(e.message, true)); if (event === 'release')
-    void endVoice().catch(e => notify(e.message, true)); }, bytes => { if (recording && chunks.reduce((n, c) => n + c.length, 0) < 640000)
+    void beginControlHold(true).catch(e => notify(e.message, true)); if (event === 'release')
+    void endControlHold().catch(e => notify(e.message, true)); }, bytes => { if (recording && chunks.reduce((n, c) => n + c.length, 0) < 640000)
     chunks.push(new Uint8Array(bytes)); }, status => { $('g2').textContent = status; }).then(b => { bridge = b; g2Active = true; renderGlasses(); }).catch(() => { $('g2').textContent = 'Browser preview'; });
 setInterval(() => { if (state) {
     renderGlasses();

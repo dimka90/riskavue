@@ -49,3 +49,19 @@ test('partial pending order already filled gives an honest outcome', async () =>
 test('crash between claiming and dispatch never restores a pending action', async () => {
  const dir=mkdtempSync(join(tmpdir(),'rv-claim-')),file=join(dir,'state.sqlite');let store=new Store(file);const service=new Service(store,new Paper());const a=service.propose('lock','Lock','');assert.equal(store.claim(a.id),true);store.close();store=new Store(file);assert.equal(store.action(a.id)?.status,'unknown');store.close();rmSync(dir,{recursive:true});
 });
+
+test('silent override requires a delay and never overrides hard locks', async () => {
+    const { service, store } = await setup();
+    try {
+        await service.lockNow('You requested a session lock', false);
+        const early = service.propose('override', 'Override?', 'Reviewed', { reason: 'Reviewed my limits', inputMethod: 'touch' });
+        assert.equal((await service.execute(early.id)).status, 'failed'); assert.ok(service.lock);
+        const ready = service.propose('override', 'Override?', 'Reviewed', { reason: 'Reviewed my limits', inputMethod: 'touch' });
+        ready.createdAt -= 4000; store.saveAction(ready);
+        assert.equal((await service.execute(ready.id, { heldMs: 3000 })).status, 'done'); assert.equal(service.lock, null);
+        await service.lockNow('Hard limit reached', true);
+        const hard = service.propose('override', 'Override?', 'Reviewed', { reason: 'Reviewed my limits', inputMethod: 'touch' });
+        hard.createdAt -= 4000; store.saveAction(hard);
+        assert.equal((await service.execute(hard.id, { heldMs: 3000 })).status, 'failed'); assert.ok(service.snapshot().lock?.hard);
+    } finally { store.close(); }
+});

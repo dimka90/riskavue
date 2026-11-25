@@ -54,8 +54,22 @@ app.get('/api/state', (_req, res) => res.json(service.snapshot()));
 app.get('/api/presets', (_req, res) => res.json(presets));
 app.post('/api/ticket', (req, res) => res.json(service.ticket(req.body)));
 app.post('/api/rules', async (req, res) => { await service.setRules(req.body); res.json(service.snapshot()); });
-app.post('/api/action', (req, res) => { const data = z.object({ kind: z.enum(['lock', 'close', 'close-all', 'breakeven']), symbol: z.enum(['BTCUSDT', 'ETHUSDT', 'SOLUSDT']).optional() }).parse(req.body); const title = { lock: 'Lock new trades through Riskavue?', close: `Close ${data.symbol} position?`, 'close-all': 'Close all demo positions?', breakeven: `Move ${data.symbol} stop to break-even?` }[data.kind]; res.json(service.propose(data.kind, title, 'Tap to confirm. This action applies to your current demo session.', { symbol: data.symbol })); });
-app.post('/api/actions/:id/confirm', async (req, res) => res.json(await service.execute(String(req.params.id))));
+app.post('/api/action', (req, res) => {
+    const data = z.object({ kind: z.enum(['lock', 'close', 'close-all', 'breakeven', 'cancel']), symbol: z.enum(['BTCUSDT', 'ETHUSDT', 'SOLUSDT']).optional(), orderId: z.string().min(1).optional() }).parse(req.body);
+    if (data.kind === 'cancel') {
+        const order = service.account.orders.find(o => o.id === data.orderId && !o.protective);
+        if (!order) throw new Error('Pending entry is no longer available');
+        res.json(service.propose('cancel', `Cancel ${order.symbol} entry?`, 'Protective stops will stay in place.', { orderId: order.id })); return;
+    }
+    const title = { lock: 'Lock new trades through Riskavue?', close: `Close ${data.symbol} position?`, 'close-all': 'Close all demo positions?', breakeven: `Move ${data.symbol} stop to break-even?` }[data.kind];
+    res.json(service.propose(data.kind, title, 'Tap to confirm. This action applies to your current demo session.', { symbol: data.symbol }));
+});
+app.post('/api/override', (req, res) => {
+    const { reason } = z.object({ reason: z.enum(['I requested this lock by mistake', 'I have reviewed my plan and limits']) }).parse(req.body);
+    if (!service.snapshot().lock || service.snapshot().lock!.hard) throw new Error('Only soft locks can be overridden');
+    res.json(service.propose('override', 'Override soft lock?', reason, { reason, inputMethod: 'touch' }));
+});
+app.post('/api/actions/:id/confirm', async (req, res) => { const input = z.object({ heldMs: z.number().min(0).max(60000).optional() }).parse(req.body ?? {}); res.json(await service.execute(String(req.params.id), input.heldMs === undefined ? undefined : { heldMs: input.heldMs })); });
 app.post('/api/actions/:id/dismiss', (req, res) => res.json(service.dismiss(String(req.params.id)) ?? { error: 'Not found' }));
 app.post('/api/presence', (_req, res) => { service.activeUntil = Date.now() + 10000; res.json({ ok: true }); });
 app.post('/api/review', async (_req, res) => res.json({ review: await makeReview(service) }));
