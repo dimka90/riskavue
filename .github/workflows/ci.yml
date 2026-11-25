@@ -17,3 +17,5 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: docker build -t riskavue:verification .
+      - run: node --import tsx scripts/test-deployment.ts
