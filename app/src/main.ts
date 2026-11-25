@@ -118,7 +118,7 @@ document.addEventListener('click', e => { const b = (e.target as HTMLElement).cl
 } if (b.dataset.scenario)
     void api('/paper/' + b.dataset.scenario, {}).then(() => { selected = undefined; return load(); }).catch(e => notify(e.message, true)); });
 $('access').onclick = () => { $<HTMLInputElement>('token').value = token; $<HTMLDialogElement>('settings').showModal(); };
-$('settings-form').onsubmit = e => { e.preventDefault(); token = $<HTMLInputElement>('token').value; sessionStorage.setItem('riskavue-token', token); $<HTMLDialogElement>('settings').close(); connect(); void load().catch(e => notify(e.message, true)); };
+$('settings-form').onsubmit = e => { e.preventDefault(); token = $<HTMLInputElement>('token').value; sessionStorage.setItem('riskavue-token', token); $<HTMLDialogElement>('settings').close(); connect(); void load().then(() => notify('Connected successfully.')).catch(e => notify(e.message, true)); };
 let draft: Rules | undefined;
 function fillRules(r: Rules) { draft = { ...r }; const form = $<HTMLFormElement>('rules-form'); for (const [k, v] of Object.entries({ ...r, maxLossAmount: r.maxLossAmount ?? '' })) {
     const input = form.elements.namedItem(k) as HTMLInputElement | HTMLSelectElement | null;
@@ -144,6 +144,7 @@ $('pair').onclick = safe(async () => { const p = await api('/pair/start', {}); $
     sessionStorage.setItem('riskavue-token', token);
     $('pair-status').textContent = 'Paired successfully.';
     connect();
+    void load().then(() => notify('Paired successfully.')).catch(e => notify(e.message, true));
 } }).catch(() => { }); }, 2500); });
 async function beginVoice(g2 = false) {
     if (recording)

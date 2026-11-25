@@ -79,3 +79,19 @@ test('trade selectors support keyboard, pointer, and correct form values', async
     await direction.press('Tab');
     await expect(direction).toHaveAttribute('aria-expanded', 'false');
 });
+
+test('successful pairing replaces the old sign-in warning', async ({ page, request }) => {
+    const base = process.env.TEST_API ?? 'http://127.0.0.1:3001/api';
+    const snapshot = await (await request.get(base + '/state')).json();
+    const pairedToken = 'a'.repeat(64);
+    await page.route('**/api/state', route => route.fulfill({ status: route.request().headers().authorization === `Bearer ${pairedToken}` ? 200 : 401, json: route.request().headers().authorization === `Bearer ${pairedToken}` ? snapshot : { error: 'Enter your server access token or pair using Telegram' } }));
+    await page.route('**/api/pair/start', route => route.fulfill({ json: { code: '123456', session: 'b'.repeat(48), expiresAt: Date.now() + 300000 } }));
+    await page.route('**/api/pair/poll', route => route.fulfill({ json: { paired: true, token: pairedToken } }));
+    await page.goto('/');
+    await expect(page.locator('#notice')).toContainText('Enter your server access token');
+    await page.locator('[data-close="settings"]').click();
+    await page.locator('#pair').click();
+    await expect(page.locator('#pair-status')).toHaveText('Paired successfully.', { timeout: 10000 });
+    await expect(page.locator('#notice')).toHaveText('Paired successfully.');
+    await expect(page.locator('#notice')).not.toHaveClass(/error/);
+});
