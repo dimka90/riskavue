@@ -1,0 +1,10 @@
+.env
+.env.*
+node_modules
+.artifacts
+data
+*.ehpk
+research
+app/dist
+test-results
+playwright-report

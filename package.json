@@ -1,0 +1,52 @@
+{
+  "name": "riskavue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.4"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,app \"tsx watch server/index.ts\" \"vite --config app/vite.config.ts\"",
+    "dev:server": "tsx watch server/index.ts",
+    "build": "tsc --noEmit && vite build --config app/vite.config.ts",
+    "start": "node --import tsx server/index.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "check:binance": "node --import tsx scripts/check-binance.ts",
+    "simulate": "node node_modules/@evenrealities/evenhub-simulator/bin/index.js http://localhost:5173",
+    "pack": "node --import tsx scripts/pack.ts",
+    "test:browser": "playwright test",
+    "test:simulator": "node --import tsx scripts/test-simulator.ts",
+    "configure:manifest": "node --import tsx scripts/configure-manifest.ts",
+    "test:binance": "node --import tsx scripts/test-binance.ts",
+    "record:demo": "node --import tsx scripts/record-demo.ts",
+    "test:binance-close": "node --import tsx scripts/test-binance-close.ts",
+    "test:providers": "node --import tsx scripts/test-ai-providers.ts",
+    "fixture:voice": "node --import tsx scripts/create-voice-fixture.ts",
+    "test:binance-breakeven": "node --import tsx scripts/test-binance-breakeven.ts",
+    "test:microphone": "node --import tsx scripts/test-live-microphone.ts"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "0.0.16",
+    "@js-temporal/polyfill": "^0.5.1",
+    "decimal.js": "^10.6.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "grammy": "^1.48.0",
+    "undici": "^7.30.2",
+    "ws": "^8.18.3",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@evenrealities/evenhub-cli": "0.2.0",
+    "@evenrealities/evenhub-simulator": "0.9.5",
+    "@playwright/test": "^1.65.1",
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.0",
+    "@types/ws": "^8.18.1",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2"
+  }
+}
