@@ -160,7 +160,7 @@ test('a trade can be entered and confirmed using only glasses buttons', async ({
     for (const digit of '06000000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap').click(); }
     await choose('Stop: 0');
     await expect(page.locator('#tap')).toHaveText('Next digit');
-    await expect(page.locator('#control-help')).toContainText('Saving a number does not send a trade');
+    await expect(page.locator('#control-help')).toContainText('Saving does not send a trade');
     for (const digit of '05900000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap').click(); }
     expect((await (await request.get(base + '/state')).json()).account.orders.length).toBe(0);
     await choose('Check trade against rules');
@@ -170,4 +170,30 @@ test('a trade can be entered and confirmed using only glasses buttons', async ({
     await expect.poll(async () => (await (await request.get(base + '/state')).json()).account.orders.length).toBe(1);
     const order = (await (await request.get(base + '/state')).json()).account.orders[0];
     expect(order).toMatchObject({ symbol: 'BTCUSDT', side: 'BUY', price: 60000, stop: 59000, qty: .001 });
+});
+
+test('rules can be edited then left without saving, and silent entry supports back', async ({ page, request }) => {
+    const base = process.env.TEST_API ?? 'http://127.0.0.1:3001/api';
+    expect((await (await request.get(base + '/state')).json()).account.mode).toBe('paper');
+    await request.post(base + '/paper/reset', { data: {} });
+    await page.goto('/');
+    await page.locator('#edit-rules').click();
+    await expect(page.locator('#preset')).toHaveValue('current');
+    const initial = await page.locator('[name=maxTrades]').inputValue();
+    await page.locator('[name=maxTrades]').fill('9');
+    await page.getByRole('button', { name: 'Back without saving' }).click();
+    await page.locator('#edit-rules').click();
+    await expect(page.locator('[name=maxTrades]')).toHaveValue(initial);
+    await page.getByRole('button', { name: 'Back without saving' }).click();
+    await page.locator('#tap').click(); await page.locator('#next').click(); await page.locator('#tap').click();
+    await page.locator('#next').click(); await page.locator('#next').click(); await page.locator('#tap').click();
+    await expect(page.locator('#display')).toContainText('Digit 1 of');
+    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('Digit 2 of');
+    await page.locator('#back').click(); await expect(page.locator('#display')).toContainText('Digit 1 of');
+    await page.locator('#back').click(); await expect(page.locator('#display')).toContainText('Quantity: 0.001');
+    await page.locator('#voice').focus();
+    await page.keyboard.press('Space');
+    await expect(page.locator('#display')).toContainText('RISKAVUE / ACTIONS');
+    await page.locator('#back').click(); await expect(page.locator('#tap')).toHaveText('Tap for actions');
+    expect((await (await request.get(base + '/state')).json()).account.orders).toHaveLength(0);
 });

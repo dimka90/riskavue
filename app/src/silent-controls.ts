@@ -30,6 +30,16 @@ export class SilentControls {
             { label: 'Back to session', run: () => { this.close(); this.host.view('session'); } },
         ]);
     }
+    goBack() {
+        if (this.busy) return;
+        if (this.edit) {
+            if (this.edit.index > 0) { this.edit.index--; this.host.draw(); }
+            else this.trade();
+            return;
+        }
+        const back = this.items.find(item => item.label === 'Back' || item.label === 'Back to session');
+        if (back) void back.run();
+    }
     move(delta: number) {
         if (this.busy) return;
         if (this.edit) { const e = this.edit; e.digits[e.index] = String((Number(e.digits[e.index]) + delta + 10) % 10); }
@@ -50,16 +60,16 @@ export class SilentControls {
         finally { this.busy = false; this.host.draw(); }
     }
     buttonLabel() { return this.edit ? this.edit.index === this.edit.digits.length - 1 ? 'Save number' : 'Next digit' : 'Tap to select'; }
-    helpText() { return this.edit ? 'Use the arrows to change the highlighted digit, then tap to move right. Saving a number does not send a trade.' : 'Use the arrows to highlight an option, then tap to select it. Trades and locks require a separate confirmation.'; }
+    helpText() { return this.edit ? 'Use the arrows to change the highlighted digit, then tap to move right. Hold to go back a digit; on the first digit, hold to cancel editing. Saving does not send a trade.' : 'Use the arrows to highlight an option, then tap to select it. Hold to go back. Trades and locks require a separate confirmation.'; }
     text() {
         if (this.edit) {
             const e = this.edit, parts = e.digits.map((d, i) => i === e.index ? `[${d}]` : ` ${d} `);
             parts.splice(parts.length - e.decimals, 0, '.');
-            return `NEW TRADE / ${e.field === 'qty' ? 'QUANTITY' : e.field === 'entry' ? 'LIMIT PRICE' : 'STOP PRICE'}\n\n${this.ticket.symbol} / ${this.ticket.side}\n\n${parts.join('')}\nDigit ${e.index + 1} of ${e.digits.length}\n\nSwipe = change digit / tap = next\nFinal digit saves; no order sent.`;
+            return `NEW TRADE / ${e.field === 'qty' ? 'QUANTITY' : e.field === 'entry' ? 'LIMIT PRICE' : 'STOP PRICE'}\n\n${this.ticket.symbol} / ${this.ticket.side}\n\n${parts.join('')}\nDigit ${e.index + 1} of ${e.digits.length}\n\nSwipe = change digit / tap = next\nHold = back / first digit = cancel`;
         }
         const start = Math.max(0, Math.min(this.index - 1, this.items.length - 3));
         const rows = this.items.slice(start, start + 3).map((item, i) => `${start + i === this.index ? '>' : ' '} ${item.label}`);
-        return `RISKAVUE / ${this.heading}\n${this.index + 1} of ${this.items.length}\n\n${rows.join('\n')}\n\n${this.busy ? 'Working...' : this.message ? this.message.slice(0, 70) : this.items[this.index]?.detail ?? 'Voice is optional.'}\nSwipe = choose / tap = select`;
+        return `RISKAVUE / ${this.heading}\n${this.index + 1} of ${this.items.length}\n\n${rows.join('\n')}\n\n${this.busy ? 'Working...' : this.message ? this.message.slice(0, 70) : this.items[this.index]?.detail ?? 'Voice is optional.'}\nSwipe = choose / tap = select / hold = back`;
     }
     private async propose(kind: string, payload: Record<string, unknown> = {}) {
         const a = await this.host.api<Action>('/action', { kind, ...payload }); this.close(); this.host.select(a);
