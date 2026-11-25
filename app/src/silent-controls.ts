@@ -49,6 +49,8 @@ export class SilentControls {
         catch (error) { this.message = error instanceof Error ? error.message : 'Request failed. Try again.'; }
         finally { this.busy = false; this.host.draw(); }
     }
+    buttonLabel() { return this.edit ? this.edit.index === this.edit.digits.length - 1 ? 'Save number' : 'Next digit' : 'Tap to select'; }
+    helpText() { return this.edit ? 'Use the arrows to change the highlighted digit, then tap to move right. Saving a number does not send a trade.' : 'Use the arrows to highlight an option, then tap to select it. Trades and locks require a separate confirmation.'; }
     text() {
         if (this.edit) {
             const e = this.edit, parts = e.digits.map((d, i) => i === e.index ? `[${d}]` : ` ${d} `);

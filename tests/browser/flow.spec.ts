@@ -8,6 +8,10 @@ test('paper session: reject, confirm, lock, disconnect, and mobile layout', asyn
     page.on('pageerror', e => errors.push(e.message));
     await page.goto('/');
     await expect(page.locator('#remaining')).toHaveText('$500.00');
+    await page.getByText('What do these numbers mean?', { exact: true }).click();
+    await expect(page.locator('.explanation')).toContainText('Riskavue does not open trades automatically');
+    await expect(page.locator('#limit-help')).toContainText('2 losses in a row');
+    await page.screenshot({ path: '.artifacts/friendly/desktop.png', fullPage: true });
     await page.getByRole('button', { name: 'Load $190 scenario', exact: true }).click();
     await expect(page.locator('#remaining')).toHaveText('$190.00');
     await page.locator('#ticket input[name=qty]').fill('0.1');
@@ -30,6 +34,7 @@ test('paper session: reject, confirm, lock, disconnect, and mobile layout', asyn
     await page.getByRole('button', { name: 'Reset paper session', exact: true }).click();
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await page.screenshot({ path: '.artifacts/friendly/mobile.png', fullPage: true });
     expect(errors).toEqual([]);
 });
 test('safe paper ticket requires confirmation and supports fill and close', async ({ page, request }) => {
@@ -89,8 +94,9 @@ test('successful pairing replaces the old sign-in warning', async ({ page, reque
     await page.route('**/api/pair/poll', route => route.fulfill({ json: { paired: true, token: pairedToken } }));
     await page.goto('/');
     await expect(page.locator('#notice')).toContainText('Enter your server access token');
-    await page.locator('[data-close="settings"]').click();
-    await page.locator('#pair').click();
+    await page.locator('#pair-settings').click();
+    await expect(page.locator('#settings')).not.toBeVisible();
+    await expect(page.locator('#pair-code')).toHaveText('/pair 123456');
     await expect(page.locator('#pair-status')).toHaveText('Paired successfully.', { timeout: 10000 });
     await expect(page.locator('#notice')).toHaveText('Paired successfully.');
     await expect(page.locator('#notice')).not.toHaveClass(/error/);
@@ -153,6 +159,8 @@ test('a trade can be entered and confirmed using only glasses buttons', async ({
     await page.locator('#tap').click(); await choose('New trade'); await choose('Limit: 0');
     for (const digit of '06000000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap').click(); }
     await choose('Stop: 0');
+    await expect(page.locator('#tap')).toHaveText('Next digit');
+    await expect(page.locator('#control-help')).toContainText('Saving a number does not send a trade');
     for (const digit of '05900000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap').click(); }
     expect((await (await request.get(base + '/state')).json()).account.orders.length).toBe(0);
     await choose('Check trade against rules');

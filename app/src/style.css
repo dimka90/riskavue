@@ -16,3 +16,9 @@
 .trade-select-option.active,.trade-select-option:hover{background:#30432a;border-color:#627954}
 .trade-select-check{visibility:hidden;color:var(--lime);font-size:16px}
 .trade-select-option[aria-selected=true] .trade-select-check{visibility:visible}
+
+.explanation{margin-top:18px;color:#b5c2b8;font-size:14px;line-height:1.6}
+.explanation summary{cursor:pointer;color:#d6f7b5;padding:8px 0}
+.explanation p{margin:10px 0}
+.preview-guide{color:#b5c2b8;font-size:14px;line-height:1.6;margin:-8px 0 20px}
+@media(max-width:650px){header{height:auto;min-height:90px;flex-wrap:wrap;gap:12px;padding-block:14px}.header-right{flex-wrap:wrap}.header-right .quiet{max-width:none}.meter-labels{gap:12px;flex-wrap:wrap}}
