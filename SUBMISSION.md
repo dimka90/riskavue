@@ -31,7 +31,7 @@ The project uses existing open-source libraries and services, including the Even
 
 - Public source repository: available above.
 - Setup instructions: `README.md`.
-- Simulator video: local `.artifacts/riskavue-core-demo.webm`; upload or attach for a public submission link.
-- Optional package: local `riskavue.ehpk`; the current package targets localhost. Rebuild with the deployed HTTPS `APP_ORIGIN` before phone use.
+- Simulator video: [public preview video](https://github.com/dimka90/riskavue/releases/download/v0.1.0-preview/riskavue-core-demo.webm).
+- Optional package: [local development package](https://github.com/dimka90/riskavue/releases/download/v0.1.0-preview/riskavue.ehpk); the current package targets localhost. Rebuild with the deployed HTTPS `APP_ORIGIN` before phone use.
 - Deployment: requires Railway account login and persistent `/data` storage.
 - Do not describe physical G2 microphone or device testing as complete until it has been performed.

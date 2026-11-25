@@ -4,7 +4,8 @@ export function deadline(until: number, timezone: string, now = Date.now()) {
     const parts = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit', timeZoneName: 'shortOffset' }).formatToParts(until);
     const part = (type: string) => parts.find(p => p.type === type)?.value ?? '';
     const minutes = Math.max(0, Math.ceil((until - now) / 60000));
-    const time = `${part('hour')}:${part('minute')} ${part('timeZoneName').replace('GMT', 'UTC')}`;
+    const zone = part('timeZoneName').replace('GMT', 'UTC').replace(/^UTC[+-]0{1,2}(?::00)?$/, 'UTC');
+    const time = `${part('hour')}:${part('minute')} ${zone}`;
     const remaining = minutes ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : 'less than 1m';
     return { time, remaining, full: `${time} (in ${remaining})` };
 }
