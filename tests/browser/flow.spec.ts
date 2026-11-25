@@ -52,3 +52,30 @@ test('safe paper ticket requires confirmation and supports fill and close', asyn
     await expect(page.locator('#positions')).toContainText('No open positions');
     await request.post(base + '/paper/reset', { data: {} });
 });
+
+test('trade selectors support keyboard, pointer, and correct form values', async ({ page }) => {
+    await page.goto('/');
+    const market = page.getByRole('combobox', { name: 'Market', exact: true });
+    await market.click();
+    await expect(page.getByRole('option', { name: /BTC \/ USDT/ })).toHaveAttribute('aria-selected', 'true');
+    await market.press('ArrowDown');
+    await market.press('Enter');
+    await expect(market).toHaveText('ETH / USDT');
+    await expect(market).toHaveAttribute('aria-expanded', 'false');
+    await market.click();
+    await page.getByRole('option', { name: /SOL \/ USDT/ }).click();
+    await expect(market).toHaveText('SOL / USDT');
+    const direction = page.getByRole('combobox', { name: 'Direction', exact: true });
+    await direction.click();
+    await page.getByRole('option', { name: 'Short / sell' }).click();
+    expect(await page.locator('#ticket').evaluate(el => Object.fromEntries(new FormData(el as HTMLFormElement)))).toMatchObject({ symbol: 'SOLUSDT', side: 'SELL' });
+    await market.click(); await market.press('Escape');
+    await expect(market).toHaveAttribute('aria-expanded', 'false');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await market.click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await direction.click();
+    await expect(market).toHaveAttribute('aria-expanded', 'false');
+    await direction.press('Tab');
+    await expect(direction).toHaveAttribute('aria-expanded', 'false');
+});
