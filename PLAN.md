@@ -4,7 +4,7 @@ Read `README.md` first for the hackathon rules and why we chose this idea. This 
 
 ## 0. Status (updated 24 Nov 2026)
 
-**Where the project lives:** `~/glass/riskavue`. The parent folder `~/glass` is the git repo on branch `main`, with no remote and no commits yet. It was moved out of `~/Blockfuse` on the owner's request and isn't part of any Blockfuse repo. The GitHub account is still to be decided; ask before adding a remote or pushing.
+**Where the project lives:** `~/glass/riskavue`, now its own Git repository. The owner selected `dimka90`; the public remote is https://github.com/dimka90/riskavue. The parent workspace remains separate.
 
 **Name confirmed:** Riskavue (pronounced “risk-a-view”), combining risk and vue (view/sight). Tagline: **Your limits. In sight.** The owner approved the name on 24 Nov 2026. Domain and trademark availability have not been established.
 

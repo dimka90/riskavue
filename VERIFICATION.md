@@ -24,7 +24,7 @@ The captioned core recording is `.artifacts/riskavue-core-demo.webm` (1280 × 72
 
 1. All provider credentials and TELEGRAM_OWNER_ID are configured locally. Telegram /start, /status, and confirmed /lock have been verified by user screenshots. Do not paste secrets into chat or commit them.
 2. Authenticate Railway locally with `railway login`. The current CLI session is unauthorized. Deploy a single server with `/data` persistent storage, HTTPS `APP_ORIGIN`, and a generated `APP_TOKEN`.
-3. The selected public repository is `dimka90/riskavue`. Publication is being prepared.
+3. Public source is available at https://github.com/dimka90/riskavue.
 4. Telegram pairing and confirmation are verified. Live microphone capture on G2, break-even replacement, and deployed G2/WebView access remain separate checks.
 5. Record the final provider scenes and submit the public repository and video links on DoraHacks.
 
@@ -69,3 +69,9 @@ Review prompts now describe manual locks as user requests, use "No rule violatio
 The owner sent a fresh six-digit pairing command to @RiskavueBot and received the success reply. The browser test completed, received its session token, and verified the matching hashed token and expiry in the server database. Evidence: `.artifacts/telegram/pairing.json` and `.artifacts/telegram/paired.png`. This verifies browser pairing; it does not establish physical G2 connectivity.
 
 Pasted commands are now recognized by message text even when Telegram supplies no command entity. Missing digits and expired codes receive explicit replies. The updated suite has 58 passing tests, including owner authorization, single-use codes, token expiry, and pasted-command handling. Pairing is no longer pending; live microphone capture, actual break-even replacement, and deployed G2/WebView access remain separate checks.
+
+## Publication and refreshed artifacts — 2026-11-25
+
+Published the secret-scanned source to `dimka90/riskavue`. All 58 tests, the production build, both browser workflows, and official simulator input checks passed. Refreshed the captioned simulator video and local `.ehpk` package with current display text and provider verification labels. The package still targets localhost and must be rebuilt for a deployed HTTPS origin.
+
+A physical browser microphone test was opened but timed out without an audio submission; it is not marked verified. Railway CLI is still unauthorized. A Docker deployment-image build is being checked locally.

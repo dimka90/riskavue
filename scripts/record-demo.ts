@@ -61,7 +61,7 @@ try {
     await api('/paper/reconnect', {}); await api('/paper/reset', {});
     const receipts = JSON.parse(readFileSync('.artifacts/binance-verification.json', 'utf8')) as { step: string }[];
     const verified = ['entry-and-protective-stop-confirmed', 'cancellation-confirmed', 'cleanup-confirmed'].every(step => receipts.some(r => r.step === step));
-    await scene('Riskavue · Your limits. In sight.', verified ? 'Separately verified on Binance Demo: reject → confirm entry + stop → cancel → clean account.' : 'Core paper and G2 flow shown. Binance execution verification remains in progress.', 'Telegram, voice transcription, and AI review still need provider-backed verification.', 9500);
+    await scene('Riskavue · Your limits. In sight.', verified ? 'Separately verified on Binance Demo: reject → confirm entry + stop → cancel → clean account.' : 'Core paper and G2 flow shown. Binance execution verification remains in progress.', 'Verified separately: Telegram pairing, Deepgram transcription, and Claude review. Physical G2 microphone testing remains.', 9500);
     await page.screenshot({ path: '.artifacts/video/end-card.png' });
 } finally {
     running = false; await frames; await context.close();
@@ -69,4 +69,4 @@ try {
     writeFileSync('.artifacts/video/transcript.txt', captions.join('\n\n'));
     await browser.close();
 }
-console.log('Recorded .artifacts/riskavue-core-demo.webm (captioned core demo; provider scenes still pending).');
+console.log('Recorded .artifacts/riskavue-core-demo.webm (captioned simulator demo; provider evidence is reported separately).');
