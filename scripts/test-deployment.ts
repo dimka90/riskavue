@@ -24,6 +24,11 @@ try {
     docker('run', '-d', '--name', name, '--env-file', env, '-p', '127.0.0.1:3004:3001', 'riskavue:verification');
     await ready();
     assert.equal((await fetch(base + '/api/state')).status, 401);
+    assert.equal((await fetch(base + '/judge')).status, 200);
+    const judge = await (await fetch(base + '/api/judge/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).json();
+    assert.equal(judge.mode, 'paper'); assert.equal(judge.remaining, 190);
+    assert.equal((await fetch(base + '/api/judge/' + judge.id + '/step', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ step: 'place', symbol: 'BTCUSDT' }) })).status, 400);
+    assert.equal((await fetch(base + '/api/state')).status, 401);
     assert.equal((await fetch(base + '/api/state', { headers })).status, 200);
     assert.equal((await fetch(base + '/api/state', { headers: { ...headers, Origin: 'https://untrusted.invalid' } })).status, 403);
     const action = await (await fetch(base + '/api/action', { method: 'POST', headers, body: JSON.stringify({ kind: 'lock' }) })).json();

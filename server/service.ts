@@ -169,7 +169,7 @@ export class Service extends EventEmitter {
                 this.store.saveAction(a);
                 return a;
             }
-            a.title = 'Lock new trades through Riskavue?';
+            a.title = `Lock new trades through Riskavue until ${deadline(tradingDay(Date.now(), this.rules).resetAt, this.rules.timezone).time}?`;
             a.detail = `Until ${deadline(tradingDay(Date.now(), this.rules).resetAt, this.rules.timezone).full}.\nPending entries will be cancelled. Protective stops will stay.\nConfirm to lock; dismiss to keep trading.`;
         }
         this.store.saveAction(a);

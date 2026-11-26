@@ -1,0 +1,46 @@
+/* Keep frequent trading interactions immediate; numbers should never animate. */
+:root{--hud:#b6f786}
+header{min-height:88px;height:auto;padding-block:18px;gap:24px;flex-wrap:wrap}
+.header-right{flex-wrap:wrap;justify-content:flex-end;gap:12px}
+.header-right a{color:#b7c6b9;font-size:13px;text-decoration:none;padding:10px 4px}
+.intro{padding:34px 0 28px;gap:24px;align-items:center}
+.intro h1{font-size:clamp(28px,3.2vw,42px);letter-spacing:-1.5px;line-height:1.15}
+.intro .eyebrow{margin-bottom:12px}.intro-note{font-size:14px;max-width:320px}
+.session-panel{background:#151f18}.panel,.glasses-panel{border-radius:12px}
+.amount{font-variant-numeric:tabular-nums;letter-spacing:-3px}
+.stats strong{font-variant-numeric:tabular-nums}.stats{margin-top:24px}
+.glasses-panel{background:#101710;border-color:#34452d}
+.glasses-panel .panel-heading{margin-bottom:16px}.preview-guide{margin:0 0 18px;font-size:13px}
+.view-tabs{display:flex;border-bottom:1px solid #34452d;margin-bottom:18px;gap:4px}
+.view-tabs button{flex:1;background:transparent;border:0;border-radius:0;padding:12px 4px;font-size:13px;color:#a4b59c;border-bottom:2px solid transparent}
+.view-tabs button[aria-pressed=true]{color:var(--hud);border-bottom-color:var(--hud)}
+.display-frame{background:#050905;border-radius:5px;border-color:#294420;box-shadow:none;padding:8px}
+.display-frame:before,.display-frame:after{display:none}
+#display{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;font-variant-numeric:tabular-nums;color:var(--hud);text-shadow:none;font-size:clamp(11px,1.05vw,15px);line-height:1.48;padding:14px;aspect-ratio:2/1}
+.glasses-controls{gap:8px;margin-top:12px}.glasses-controls button{min-height:44px;border-radius:6px}
+.glasses-controls button:disabled{opacity:.45}.voice{min-height:42px;border-radius:6px;font-size:14px}
+#actions{background:#24371d;border-color:#587c42;color:#d0f7b0;font-weight:600}
+#back{border-style:dashed}#control-help{font-size:12px;line-height:1.6}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #b6f786;outline-offset:4px}
+button:not(:disabled):active{transform:scale(.98)}
+.glasses-focus{background:#050805}
+.glasses-focus header{border-color:#1e2b1b}
+.glasses-focus header .tagline,.glasses-focus header a[href='/judge'],.glasses-focus #pair-top{display:none}
+.glasses-focus main{max-width:720px;padding:28px 24px}
+.glasses-focus .intro,.glasses-focus .primary,.glasses-focus aside>.panel,.glasses-focus footer{display:none}
+.glasses-focus .workspace,.glasses-focus aside{display:block}
+.glasses-focus .glasses-panel{max-width:624px;margin:24px auto;border:0;background:transparent;padding:0}
+.glasses-focus #display{font-size:16px;line-height:1.5}
+.glasses-focus .display-frame{padding:10px}
+.glasses-focus .preview-guide{display:none}
+.glasses-focus .view-tabs{margin-bottom:16px}
+@media(min-width:1500px){#display{font-size:15px}}
+@media(max-width:900px){.header-right{justify-content:flex-start}.tagline{display:none}#display{font-size:11px}}
+@media(max-width:650px){header{padding:14px 16px;gap:12px}.header-right{gap:8px}.header-right button,.header-right a{font-size:12px}.intro{padding:24px 0}.intro h1{font-size:30px}.workspace{gap:18px}.glasses-panel,.session-panel{padding:18px}.glasses-focus main{padding:12px 16px}.glasses-focus .glasses-panel{margin:12px auto}.glasses-focus #display,#display{font-size:clamp(10px,2.65vw,14px);padding:10px}.glasses-focus .display-frame{padding:6px}.view-tabs button{min-height:44px}.amount{font-size:60px}.header-right .quiet{max-width:none}}
+/* Scale all ten lines with the 2:1 frame, including narrow phone previews. */
+.display-frame{container-type:inline-size}
+#display,.glasses-focus #display{font-size:3.1cqw;line-height:1.35;padding:2cqw}
+html:has(.glasses-focus){background:#050805}
+.hud-row{display:inline-flex;justify-content:space-between;width:100%;gap:12px}
+.hud-row>span:last-child{text-align:right;white-space:nowrap}
+.hud-divider{display:inline-block;width:100%;height:1em;vertical-align:middle;border-top:1px solid #456735}

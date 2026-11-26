@@ -1,18 +1,36 @@
-import { waitForEvenAppBridge, TextContainerProperty, CreateStartUpPageContainer, TextContainerUpgrade, OsEventTypeList } from '@evenrealities/even_hub_sdk';
-export async function glasses(onInput: (event: 'tap' | 'up' | 'down' | 'hold' | 'release' | 'active' | 'inactive') => void, onAudio: (bytes: Uint8Array) => void, onStatus: (s: string) => void) {
+import { glassesMenu, menuInput } from './glasses-menu.ts';
+import { valueColumn } from './display-layout.ts';
+import { waitForEvenAppBridge, TextContainerProperty, CreateStartUpPageContainer, TextContainerUpgrade, OsEventTypeList, RebuildPageContainer, ImageContainerProperty, ImageRawDataUpdate, ImageRawDataUpdateResult } from '@evenrealities/even_hub_sdk';
+export async function glasses(onInput: (event: 'tap' | 'up' | 'down' | 'hold' | 'release' | 'active' | 'inactive' | 'back' | 'actions') => void, onAudio: (bytes: Uint8Array) => void, onStatus: (s: string) => void) {
     const bridge = await waitForEvenAppBridge();
-    const result = await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({ containerTotalNum: 1, textObject: [new TextContainerProperty({ xPosition: 12, yPosition: 8, width: 552, height: 272, borderWidth: 0, borderColor: 5, textColor: 4, paddingLength: 4, containerID: 1, containerName: 'riskavue', content: 'Riskavue\nYour limits. In sight.\nConnecting...', isEventCapture: 1 })] }));
+    const result = await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({ menuObject: glassesMenu(), containerTotalNum: 1, textObject: [new TextContainerProperty({ xPosition: 12, yPosition: 4, width: 552, height: 280, borderWidth: 0, borderColor: 5, textColor: 4, paddingLength: 4, containerID: 1, containerName: 'riskavue', content: 'Riskavue\nYour limits. In sight.\nConnecting...', isEventCapture: 1 })] }));
     if (result !== 0)
         throw new Error(`G2 page rejected (${result})`);
     onStatus('G2 connected');
-    let latest = '', sent = '', busy = false, active = true;
+    let latest = '', sent = '', busy = false, active = true, layout = '', baseSent = '', returningFromMenu = false;
+    const textContainer = (content: string) => new TextContainerProperty({ xPosition: 12, yPosition: 4, width: 552, height: 280, borderWidth: 0, paddingLength: 4, containerID: 1, containerName: 'riskavue', content, isEventCapture: 1, textColor: 4, zOrderIndex: 0 });
     const timer = setInterval(async () => { if (busy || !active || !latest || latest === sent)
         return; busy = true; const content = latest; try {
-        const ok = await bridge.textContainerUpgrade(new TextContainerUpgrade({ containerID: 1, containerName: 'riskavue', content }));
-        if (ok)
-            sent = content;
-        else
-            onStatus('G2 update failed');
+        const nativeContent = content.replaceAll('-'.repeat(40), '-'.repeat(53));
+        const column = valueColumn(nativeContent);
+        let ok = true;
+        if ((column?.key ?? '') !== layout) {
+            ok = await bridge.rebuildPageContainer(new RebuildPageContainer({ menuObject: glassesMenu(), containerTotalNum: column ? 2 : 1, textObject: [textContainer(column?.content ?? nativeContent)], imageObject: column ? [new ImageContainerProperty({ xPosition: 320, yPosition: column.y, width: 240, height: column.height, containerID: 2, containerName: 'values', zOrderIndex: 1 })] : [] }));
+            if (ok) { layout = column?.key ?? ''; baseSent = column?.content ?? nativeContent; }
+        } else if (baseSent !== (column?.content ?? nativeContent)) {
+            ok = await bridge.textContainerUpgrade(new TextContainerUpgrade({ containerID: 1, containerName: 'riskavue', content: column?.content ?? nativeContent }));
+            if (ok) baseSent = column?.content ?? nativeContent;
+        }
+        if (ok && column) {
+            ok = await bridge.updateImageRawData(new ImageRawDataUpdate({ containerID: 2, containerName: 'values', imageData: column.imageData })) === ImageRawDataUpdateResult.success;
+            if (!ok) {
+                // Keep every value readable if a host cannot render the image column.
+                ok = await bridge.rebuildPageContainer(new RebuildPageContainer({ menuObject: glassesMenu(), containerTotalNum: 1, textObject: [textContainer(nativeContent)] }));
+                layout = ''; baseSent = nativeContent; onStatus('G2 text fallback');
+            }
+        }
+        if (ok) sent = content;
+        else onStatus('G2 update failed');
     }
     catch {
         onStatus('G2 disconnected');
@@ -24,6 +42,11 @@ export async function glasses(onInput: (event: 'tap' | 'up' | 'down' | 'hold' | 
         eventType?: OsEventTypeList;
     }) => event ? event.eventType ?? OsEventTypeList.CLICK_EVENT : null;
     const unsubscribe = bridge.onEvenHubEvent(event => {
+        if (event.menuItemClickEvent) {
+            const input = menuInput(event.menuItemClickEvent.itemID);
+            if (input) { returningFromMenu = true; active = true; sent = ''; onInput(input); }
+            return;
+        }
         if (event.audioEvent) {
             onAudio(event.audioEvent.audioPcm);
             return;
@@ -39,6 +62,8 @@ export async function glasses(onInput: (event: 'tap' | 'up' | 'down' | 'hold' | 
             return;
         }
         if (types.includes(OsEventTypeList.FOREGROUND_EXIT_EVENT)) {
+            // A native menu selection closes the menu foreground, not our page.
+            if (returningFromMenu) { returningFromMenu = false; active = true; sent = ''; onInput('active'); return; }
             active = false;
             onInput('inactive');
             return;
@@ -48,6 +73,13 @@ export async function glasses(onInput: (event: 'tap' | 'up' | 'down' | 'hold' | 
             sent = '';
             onInput('active');
             return;
+        }
+        const pageInput = types.some(value => value !== null && [OsEventTypeList.CLICK_EVENT, OsEventTypeList.SCROLL_TOP_EVENT, OsEventTypeList.SCROLL_BOTTOM_EVENT, OsEventTypeList.LONG_PRESS_EVENT, OsEventTypeList.LONG_PRESS_RELEASE_EVENT].includes(value));
+        // Input delivered to our page proves it is visible again, even when the
+        // host omits a foreground-enter event after dismissing its native menu.
+        if (pageInput && !active) {
+            active = true; returningFromMenu = false; sent = '';
+            onInput('active');
         }
         if (types.includes(OsEventTypeList.CLICK_EVENT))
             onInput('tap');

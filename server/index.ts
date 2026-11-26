@@ -1,4 +1,5 @@
 import express from 'express';
+import { judgeRouter } from './judge.ts';
 import { createServer } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { resolve } from 'node:path';
@@ -44,6 +45,7 @@ app.use('/api', (req, res, next) => { const key = req.socket.remoteAddress ?? 'u
     return;
 } next(); });
 app.use(express.json({ limit: '32kb' }));
+app.use('/api/judge', judgeRouter());
 app.post('/api/pair/start', (_req, res) => res.json(pairing.issue()));
 app.post('/api/pair/poll', (req, res) => { const s = z.object({ session: z.string().length(48) }).parse(req.body); res.json(pairing.poll(s.session)); });
 app.use('/api', (req, res, next) => { if (!tokenValid(req.headers.authorization?.replace(/^Bearer /, '') ?? '')) {
@@ -122,6 +124,8 @@ app.post('/api/paper/:scenario', async (req, res) => {
     await service.refresh();
     res.json(service.snapshot());
 });
+app.get('/judge/', (req, res, next) => { if (req.path.endsWith('/')) res.redirect(308, '/judge'); else next(); });
+app.get('/judge', (_req, res) => res.sendFile(resolve('app/dist/judge.html')));
 app.use(express.static(resolve('app/dist')));
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => { res.status(400).json({ error: err instanceof z.ZodError ? err.issues.map(x => x.message).join('; ') : err instanceof Error ? err.message : 'Request failed' }); });
 const server = createServer(app), wss = new WebSocketServer({ noServer: true });

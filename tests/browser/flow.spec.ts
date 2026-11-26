@@ -8,6 +8,9 @@ test('paper session: reject, confirm, lock, disconnect, and mobile layout', asyn
     page.on('pageerror', e => errors.push(e.message));
     await page.goto('/');
     await expect(page.locator('#remaining')).toHaveText('$500.00');
+    await expect(page.locator('#tap')).toBeDisabled();
+    await expect(page.locator('#tap')).toHaveText('Nothing to confirm');
+    await expect(page.locator('#actions')).toBeVisible();
     await page.getByText('What do these numbers mean?', { exact: true }).click();
     await expect(page.locator('.explanation')).toContainText('Riskavue does not open trades automatically');
     await expect(page.locator('#limit-help')).toContainText('2 losses in a row');
@@ -107,17 +110,17 @@ test('glasses controls lock and deliberately override without microphone input',
     expect((await (await request.get(base + '/state')).json()).account.mode).toBe('paper');
     await request.post(base + '/paper/reset', { data: {} });
     const voiceRequests: string[] = []; page.on('request', r => { if (r.url().endsWith('/voice')) voiceRequests.push(r.url()); });
-    await page.goto('/'); await expect(page.locator('#tap')).toHaveText('Tap for actions');
-    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('> Lock session');
-    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('LOCK THIS SESSION?');
+    await page.goto('/'); await expect(page.locator('#tap')).toHaveText('Nothing to confirm');
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await expect(page.locator('#display')).toContainText('> Lock session');
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await expect(page.locator('#display')).toContainText('LOCK THIS SESSION?');
     expect((await (await request.get(base + '/state')).json()).lock).toBeNull();
-    await page.locator('#tap').click(); await expect(page.locator('#connection')).toHaveText('Session locked');
-    await page.locator('#tap').click(); await page.locator('#tap').click();
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await expect(page.locator('#connection')).toHaveText('Session locked');
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await page.locator('#tap:enabled, #actions:visible').first().click();
     for (let i = 0; i < 7; i++) await page.locator('#next').click();
     await expect(page.locator('#display')).toContainText('> Override soft lock');
-    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('CHOOSE YOUR REASON');
-    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('Hold 3 seconds');
-    await page.locator('#tap').click(); expect((await (await request.get(base + '/state')).json()).lock).toBeTruthy();
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await expect(page.locator('#display')).toContainText('CHOOSE YOUR REASON');
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await expect(page.locator('#display')).toContainText('Hold 3 seconds');
+    await page.locator('#tap:enabled, #actions:visible').first().click(); expect((await (await request.get(base + '/state')).json()).lock).toBeTruthy();
     await page.locator('#voice').focus(); await page.keyboard.down('Space'); await page.waitForTimeout(200); await page.keyboard.up('Space');
     expect((await (await request.get(base + '/state')).json()).lock).toBeTruthy();
     await page.keyboard.down('Space'); await page.waitForTimeout(3200); await page.keyboard.up('Space');
@@ -131,42 +134,42 @@ test('silent menu can cancel an entry and close a position after confirmation', 
     await request.post(base + '/paper/reset', { data: {} }); await request.post(base + '/paper/seed', { data: {} });
     const seeded = await (await request.get(base + '/state')).json();
     for (const a of seeded.actions.filter((a: any) => a.status === 'pending')) await request.post(base + `/actions/${a.id}/dismiss`, { data: {} });
-    await page.goto('/'); await expect(page.locator('#tap')).toHaveText('Tap for actions');
-    await page.locator('#tap').click(); for (let i = 0; i < 3; i++) await page.locator('#next').click();
-    await expect(page.locator('#display')).toContainText('> Cancel pending entry'); await page.locator('#tap').click(); await page.locator('#tap').click();
-    await expect(page.locator('#display')).toContainText('Cancel ETHUSDT entry?'); await page.locator('#tap').click();
+    await page.goto('/'); await expect(page.locator('#tap')).toHaveText('Nothing to confirm');
+    await page.locator('#tap:enabled, #actions:visible').first().click(); for (let i = 0; i < 3; i++) await page.locator('#next').click();
+    await expect(page.locator('#display')).toContainText('> Cancel pending entry'); await page.locator('#tap:enabled, #actions:visible').first().click(); await page.locator('#tap:enabled, #actions:visible').first().click();
+    await expect(page.locator('#display')).toContainText('Cancel ETHUSDT entry?'); await page.locator('#tap:enabled, #actions:visible').first().click();
     await expect.poll(async () => (await (await request.get(base + '/state')).json()).account.orders.length).toBe(0);
-    await page.locator('#tap').click(); await page.locator('#tap').click(); await page.locator('#next').click(); await page.locator('#next').click();
-    await expect(page.locator('#display')).toContainText('> Manage positions'); await page.locator('#tap').click(); await page.locator('#tap').click();
-    await expect(page.locator('#display')).toContainText('> Close position'); await page.locator('#tap').click();
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await page.locator('#tap:enabled, #actions:visible').first().click(); await page.locator('#next').click(); await page.locator('#next').click();
+    await expect(page.locator('#display')).toContainText('> Manage positions'); await page.locator('#tap:enabled, #actions:visible').first().click(); await page.locator('#tap:enabled, #actions:visible').first().click();
+    await expect(page.locator('#display')).toContainText('> Close position'); await page.locator('#tap:enabled, #actions:visible').first().click();
     await expect(page.locator('#display')).toContainText('Close BTCUSDT position?');
     expect((await (await request.get(base + '/state')).json()).account.positions.length).toBe(1);
-    await page.locator('#tap').click(); await expect.poll(async () => (await (await request.get(base + '/state')).json()).account.positions.length).toBe(0);
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await expect.poll(async () => (await (await request.get(base + '/state')).json()).account.positions.length).toBe(0);
 });
 
 test('a trade can be entered and confirmed using only glasses buttons', async ({ page, request }) => {
     const base = process.env.TEST_API ?? 'http://127.0.0.1:3001/api';
     expect((await (await request.get(base + '/state')).json()).account.mode).toBe('paper');
     await request.post(base + '/paper/reset', { data: {} }); await page.goto('/');
-    await expect(page.locator('#tap')).toHaveText('Tap for actions');
+    await expect(page.locator('#tap')).toHaveText('Nothing to confirm');
     async function choose(label: string) {
         for (let i = 0; i < 12; i++) {
-            if ((await page.locator('#display').innerText()).split('\n').includes('> ' + label)) { await page.locator('#tap').click(); return; }
+            if ((await page.locator('#display').innerText()).split('\n').includes('> ' + label)) { await page.locator('#tap:enabled, #actions:visible').first().click(); return; }
             await page.locator('#next').click();
         }
         throw new Error('Missing menu entry: ' + label);
     }
-    await page.locator('#tap').click(); await choose('New trade'); await choose('Limit: 0');
-    for (const digit of '06000000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap').click(); }
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await choose('New trade'); await choose('Limit: 0');
+    for (const digit of '06000000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap:enabled, #actions:visible').first().click(); }
     await choose('Stop: 0');
     await expect(page.locator('#tap')).toHaveText('Next digit');
     await expect(page.locator('#control-help')).toContainText('Saving does not send a trade');
-    for (const digit of '05900000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap').click(); }
+    for (const digit of '05900000') { for (let i = 0; i < Number(digit); i++) await page.locator('#next').click(); await page.locator('#tap:enabled, #actions:visible').first().click(); }
     expect((await (await request.get(base + '/state')).json()).account.orders.length).toBe(0);
     await choose('Check trade against rules');
     await expect(page.locator('#display')).toContainText('CONFIRM');
     expect((await (await request.get(base + '/state')).json()).account.orders.length).toBe(0);
-    await page.locator('#tap').click();
+    await page.locator('#tap:enabled, #actions:visible').first().click();
     await expect.poll(async () => (await (await request.get(base + '/state')).json()).account.orders.length).toBe(1);
     const order = (await (await request.get(base + '/state')).json()).account.orders[0];
     expect(order).toMatchObject({ symbol: 'BTCUSDT', side: 'BUY', price: 60000, stop: 59000, qty: .001 });
@@ -185,15 +188,71 @@ test('rules can be edited then left without saving, and silent entry supports ba
     await page.locator('#edit-rules').click();
     await expect(page.locator('[name=maxTrades]')).toHaveValue(initial);
     await page.getByRole('button', { name: 'Back without saving' }).click();
-    await page.locator('#tap').click(); await page.locator('#next').click(); await page.locator('#tap').click();
-    await page.locator('#next').click(); await page.locator('#next').click(); await page.locator('#tap').click();
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await page.locator('#next').click(); await page.locator('#tap:enabled, #actions:visible').first().click();
+    await page.locator('#next').click(); await page.locator('#next').click(); await page.locator('#tap:enabled, #actions:visible').first().click();
     await expect(page.locator('#display')).toContainText('Digit 1 of');
-    await page.locator('#tap').click(); await expect(page.locator('#display')).toContainText('Digit 2 of');
+    await page.locator('#tap:enabled, #actions:visible').first().click(); await expect(page.locator('#display')).toContainText('Digit 2 of');
     await page.locator('#back').click(); await expect(page.locator('#display')).toContainText('Digit 1 of');
     await page.locator('#back').click(); await expect(page.locator('#display')).toContainText('Quantity: 0.001');
     await page.locator('#voice').focus();
     await page.keyboard.press('Space');
     await expect(page.locator('#display')).toContainText('RISKAVUE / ACTIONS');
-    await page.locator('#back').click(); await expect(page.locator('#tap')).toHaveText('Tap for actions');
+    await page.locator('#back').click(); await expect(page.locator('#tap')).toHaveText('Nothing to confirm');
     expect((await (await request.get(base + '/state')).json()).account.orders).toHaveLength(0);
+});
+
+test('focused glasses view keeps navigation usable and does not hide pending confirmation', async ({ page, request }) => {
+    const base = process.env.TEST_API ?? 'http://127.0.0.1:3001/api';
+    expect((await (await request.get(base + '/state')).json()).account.mode).toBe('paper');
+    await request.post(base + '/paper/reset', { data: {} });
+    await page.goto('/');
+    await expect(page.locator('#display')).toContainText('LOSS ALLOWANCE');
+    await page.screenshot({ path: '.artifacts/ui-polish/companion.png', fullPage: true });
+    await page.locator('#focus-view').click();
+    await expect(page).toHaveURL(/view=glasses/);
+    await expect(page.locator('.session-panel')).not.toBeVisible();
+    await expect(page.locator('.glasses-panel')).toBeVisible();
+    await page.locator('[data-view=rules]').click();
+    await expect(page.locator('#display')).toContainText('YOUR RULES');
+    await expect(page.locator('[data-view=rules]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-view=session]').click();
+    const rightEdges = await page.locator('.hud-row>span:last-child').evaluateAll(elements => elements.map(e => e.getBoundingClientRect().right));
+    expect(rightEdges.length).toBe(4);
+    expect(Math.max(...rightEdges) - Math.min(...rightEdges)).toBeLessThan(1);
+    await page.screenshot({ path: '.artifacts/ui-polish/glasses-desktop.png', fullPage: true });
+    await page.locator('#actions').click(); await page.locator('#tap').click();
+    await expect(page.locator('#display')).toContainText('LOCK THIS SESSION?');
+    await expect(page.locator('[data-view=rules]')).toBeDisabled();
+    await page.locator('#back').click();
+    expect((await (await request.get(base + '/state')).json()).lock).toBeNull();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '.artifacts/ui-polish/glasses-mobile.png', fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    expect(await page.locator('#display').evaluate(el => el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight)).toBe(false);
+    await page.locator('#focus-view').click();
+    await expect(page.locator('.session-panel')).toBeVisible();
+});
+
+
+test('repeated authorization failures do not reopen settings or cover pairing', async ({ page }) => {
+    await page.route('**/api/state', route => route.fulfill({ status: 401, json: { error: 'Sign in required' } }));
+    await page.route('**/api/action', route => route.fulfill({ status: 401, json: { error: 'Sign in required' } }));
+    await page.route('**/api/pair/start', route => route.fulfill({ json: { code: '123456', session: 'b'.repeat(48), expiresAt: Date.now() + 300000 } }));
+    await page.route('**/api/pair/poll', route => route.fulfill({ json: { paired: false } }));
+    await page.goto('/');
+    await expect(page.locator('#settings')).toBeVisible();
+    await page.locator('[data-close="settings"]').click();
+    const failRequest = async () => {
+        const response = page.waitForResponse('**/api/action');
+        await page.locator('#lock').evaluate((element: HTMLButtonElement) => element.click());
+        expect((await response).status()).toBe(401);
+    };
+    await failRequest();
+    await expect(page.locator('#settings')).not.toBeVisible();
+    await page.locator('#pair-top').click();
+    await expect(page.locator('#pair-code')).toHaveText('/pair 123456');
+    await failRequest();
+    await expect(page.locator('#settings')).not.toBeVisible();
+    await expect(page.locator('#pair-dialog')).toBeVisible();
+    await expect(page.locator('#pair-code')).toHaveText('/pair 123456');
 });

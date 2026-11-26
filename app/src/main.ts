@@ -1,4 +1,6 @@
 import './style.css';
+import './companion.css';
+import { valueRows } from './display-layout.ts';
 import { SilentControls } from './silent-controls.ts';
 import { enhanceTradeSelects } from './trade-select.ts';
 import { deadline, actionText } from '../../shared/session-text.ts';
@@ -12,14 +14,14 @@ const money = (n: number | undefined) => n === undefined ? '—' : new Intl.Numb
 let state: Snapshot | undefined, page: Page = 'session', selected: string | undefined, token = sessionStorage.getItem('riskavue-token') ?? '', presets: Preset[] = [], bridge: Awaited<ReturnType<typeof glasses>> | undefined;
 let socket: WebSocket | undefined, reconnect: ReturnType<typeof setTimeout>, recording = false, chunks: Uint8Array[] = [], audio: AudioContext | undefined, media: MediaStream | undefined, processor: ScriptProcessorNode | undefined, recordTimer: ReturnType<typeof setTimeout>, g2Active = false;
 $('app').innerHTML = `
-<header><a class="brand" href="/" aria-label="Riskavue home"><span class="brand-mark">R<span>·</span></span>riskavue</a><span class="tagline">Your limits. In sight.</span><div class="header-right"><span id="mode" class="badge">CONNECTING</span><button id="pair-top" class="quiet">Connect with Telegram</button><button id="access" class="quiet">Connection settings</button></div></header>
-<main><section class="intro"><div><p class="eyebrow">YOUR TRADING SESSION</p><h1>A little distance.<br>A clearer decision.</h1></div><p class="intro-note">Set your rules here.<br>Use swipes and taps on your glasses.</p></section>
+<header><a class="brand" href="/" aria-label="Riskavue home"><span class="brand-mark">R<span>·</span></span>riskavue</a><span class="tagline">Your limits. In sight.</span><div class="header-right"><button id="focus-view" class="secondary" aria-pressed="false">Glasses view</button><a href="/judge">Judge walkthrough</a><span id="mode" class="badge">CONNECTING</span><button id="pair-top" class="quiet">Connect with Telegram</button><button id="access" class="quiet">Connection settings</button></div></header>
+<main><section class="intro"><div><p class="eyebrow">YOUR TRADING SESSION</p><h1>Your rules.<br>Enforced before the trade.</h1></div><p class="intro-note">Other G2 trading apps show your risk.<br>Riskavue enforces your rules.</p></section>
 <div id="notice" role="status" aria-live="polite"></div>
 <div class="workspace"><section class="primary"><div class="panel session-panel"><div class="panel-heading"><h2>Loss allowance remaining</h2><span id="connection" class="connection">Connecting</span></div><div class="amount" id="remaining">—</div><p id="risk-caption">Waiting for your account</p><div class="meter"><div id="meter-fill"></div><i></i></div><div class="meter-labels"><span id="floor">Floor —</span><span id="equity">Equity —</span></div><div class="stats"><div><span>Trades left</span><strong id="entries">—</strong></div><div><span id="loss-label">Losses in a row</span><strong id="losses">—</strong></div><div><span>Daily reset</span><strong id="reset">—</strong></div></div><p class="hint" id="limit-help"></p><details class="explanation"><summary>What do these numbers mean?</summary><p>Your loss allowance is the distance between your account value and your minimum allowed value. It is not profit or money to spend.</p><p>Trades left counts new entries, whether they win or lose. Riskavue does not open trades automatically.</p><p>A lock blocks new trades placed through Riskavue. It cannot block trades placed directly on the exchange.</p></details><div class="baseline" id="baseline"></div><div class="session-actions"><button id="lock" class="secondary">Lock my session</button><button id="close-all" class="quiet">Close all positions</button></div></div>
 <div class="panel"><div class="panel-heading"><h2>Open positions</h2><span id="position-count" class="subtle">0</span></div><div id="positions" class="empty">No positions open.</div></div>
 <div class="panel"><div class="panel-heading"><h2>Orders waiting to open</h2><span class="subtle">Stops stay protected</span></div><div id="orders" class="empty">No pending entries.</div></div>
 <div class="panel"><div class="panel-heading"><h2>Your session review</h2><button id="review" class="quiet">Generate AI review</button></div><p id="review-text" class="review-text">Your session review will appear here.</p><div id="decisions" class="timeline"></div></div></section>
-<aside><section class="glasses-panel"><div class="panel-heading"><h2>What your glasses show</h2><span id="g2" class="subtle">Browser preview</span></div><p class="preview-guide">Try the glasses controls here. You can use every action without speaking.</p><div class="display-frame"><pre id="display">Riskavue\nYour limits. In sight.\nConnecting...</pre></div><div class="glasses-controls"><button id="previous" aria-label="Previous glasses view">↑</button><button id="tap" class="tap" disabled>Waiting for connection</button><button id="next" aria-label="Next glasses view">↓</button></div><button id="back" class="voice" hidden>Back</button><button id="voice" class="voice">Hold to speak</button><p id="control-help" class="hint" aria-live="polite">Tap to open the action menu. Arrows preview swipes on the glasses.</p></section>
+<aside><section class="glasses-panel"><div class="panel-heading"><h2>Glasses display</h2><span id="g2" class="subtle">Browser preview</span></div><p class="preview-guide">The same text as your G2. Use the controls below; voice is optional.</p><nav class="view-tabs" aria-label="Glasses views"><button data-view="session" aria-pressed="true">Overview</button><button data-view="positions" aria-pressed="false">Positions</button><button data-view="rules" aria-pressed="false">Rules</button><button data-view="review" aria-pressed="false">Review</button></nav><div class="display-frame"><pre id="display">Riskavue\nYour limits. In sight.\nConnecting...</pre></div><div class="glasses-controls"><button id="previous" aria-label="Previous glasses view">↑</button><button id="tap" class="tap" disabled>Waiting for connection</button><button id="next" aria-label="Next glasses view">↓</button></div><button id="actions" class="voice" hidden>Open actions menu</button><button id="back" class="voice" hidden>Back</button><button id="voice" class="voice">Hold to speak</button><p id="control-help" class="hint" aria-live="polite">Tap to open the action menu. Arrows preview swipes on the glasses.</p></section>
 <section class="panel ticket-panel"><div class="panel-heading"><h2>Check a trade</h2><span class="subtle">Review before sending</span></div><form id="ticket"><div class="form-row"><label>Market<select name="symbol"><option>BTCUSDT</option><option>ETHUSDT</option><option>SOLUSDT</option></select></label><label>Direction<select name="side"><option value="BUY">Long / buy</option><option value="SELL">Short / sell</option></select></label></div><label>Quantity<input name="qty" type="number" min="0.0001" step="any" value="0.01" required></label><div class="form-row"><label>Limit price<input name="entry" type="number" min="0.01" step="any" value="60000" required></label><label>Stop price<input name="stop" type="number" min="0.01" step="any" value="59000" required></label></div><button type="submit" class="primary-button">Check against my rules</button><p class="hint">Nothing is submitted until you confirm. Binance entries use post-only limits.</p></form><div id="confirmation"></div></section>
 <section class="panel"><div class="panel-heading"><h2>Your rules</h2><button id="edit-rules" class="secondary">Edit rules</button></div><p class="hint">You choose these limits here. Firm presets are starting points; check them against your firm’s current rules.</p><div id="rule-summary" class="rule-summary"></div></section>
 <section class="panel"><h2>Connected tools</h2><div id="integrations" class="integrations"></div><button id="pair" class="quiet">Pair with Telegram</button></section>
@@ -28,15 +30,27 @@ $('app').innerHTML = `
 <dialog id="settings"><form id="settings-form"><div class="panel-heading"><h2>Connection settings</h2><button type="button" data-close="settings" class="quiet">Close</button></div><p>Connect with Telegram to see your account on this screen.</p><button type="button" id="pair-settings" class="primary-button">Connect with Telegram</button><p class="hint">Or use your server access token:</p><label>Server access token<input id="token" type="password" autocomplete="off"></label><button class="primary-button">Connect</button><p class="hint">Stored in this tab only. Exchange keys stay on the server.</p></form></dialog>
 <dialog id="rules-dialog"><form id="rules-form"><div class="panel-heading"><h2>Set your session rules</h2><button type="button" data-close="rules-dialog" class="quiet">Back without saving</button></div><label>Start with<select id="preset"></select></label><p id="preset-description" class="hint"></p><div class="form-row"><label>Initial balance<input name="initialBalance" type="number" min="1" required></label><label>Daily limit (%)<input name="dailyPct" type="number" min="0.1" max="50" step="0.1" required></label></div><div class="form-row"><label>Maximum loss (%)<input name="maxPct" type="number" min="0.1" max="90" step="0.1" required></label><label>Buffer (% of daily allowance)<input name="bufferPct" type="number" min="0" max="100" required></label></div><div class="form-row"><label>Maximum trades per session<input name="maxTrades" type="number" min="1" required></label><label>Losses before locking<input name="maxLosses" type="number" min="1" required></label></div><div class="form-row"><label>Loss counting<select name="lossMode"><option value="consecutive">Consecutive</option><option value="total">Total</option></select></label><label>Time zone<input name="timezone" required></label></div><div class="form-row"><label>Reset hour<input name="resetHour" type="number" min="0" max="23" required></label><label>Reset minute<input name="resetMinute" type="number" min="0" max="59" required></label></div><div class="form-row"><label>Daily reference<select name="dailyBasis"><option value="balance">Day-start balance</option><option value="equity">Day-start equity</option><option value="higher">Higher balance/equity</option></select></label><label>Daily percentage basis<select name="dailyAllowanceBasis"><option value="initial">Initial balance</option><option value="day">Day-start reference</option></select></label></div><div class="form-row"><label>Maximum floor<select name="maxMode"><option value="static">Static</option><option value="trailing">End-of-day trailing</option><option value="capped">Trailing, capped at initial</option></select></label><label>Maximum loss amount (optional)<input name="maxLossAmount" type="number" min="1" step="any" placeholder="Use percentage"></label></div><div class="form-row"><label>Breach boundary<select name="touchBreach"><option value="false">Below floor</option><option value="true">Touches floor</option></select></label><label>Fee estimate (%)<input name="feeRate" type="number" min="0" max="2" step="0.001" required></label></div><label>Slippage estimate (%)<input name="slippageRate" type="number" min="0" max="5" step="0.001" required></label><button class="primary-button">Start rule session</button><p class="hint">Close positions and cancel entries before changing rules. Firm-style presets are calculation models, not prop-firm integrations.</p></form></dialog>
 <dialog id="pair-dialog"><div class="panel-heading"><h2>Connect with Telegram</h2><button data-close="pair-dialog" class="quiet">Close</button></div><p>1. Open your Riskavue bot in Telegram.<br>2. Send the command below.<br>3. Return here after the bot confirms pairing.</p><code id="pair-code"></code><p class="hint" id="pair-status">Code expires in five minutes.</p></dialog>`;
+function setFocusView(focused: boolean) {
+    document.body.classList.toggle('glasses-focus', focused);
+    $('focus-view').textContent = focused ? 'Companion view' : 'Glasses view';
+    $('focus-view').setAttribute('aria-pressed', String(focused));
+    const url = new URL(location.href); if (focused) url.searchParams.set('view', 'glasses'); else url.searchParams.delete('view');
+    history.replaceState(null, '', url);
+}
+setFocusView(new URL(location.href).searchParams.get('view') === 'glasses');
+$('focus-view').onclick = () => setFocusView(!document.body.classList.contains('glasses-focus'));
 function notify(text: string, error = false) { $('notice').textContent = text; $('notice').className = error ? 'notice error' : 'notice'; }
 enhanceTradeSelects($<HTMLFormElement>('ticket'));
 const silent = new SilentControls({ state: () => state, api, draw: () => renderGlasses(), select: a => { selected = a.id; void load().catch(e => notify(e.message, true)); }, view: next => { page = next; selected = undefined; render(); void load().catch(e => notify(e.message, true)); } });
 let overrideHold: { id: string; at: number } | undefined;
 let overrideTimer: ReturnType<typeof setTimeout> | undefined;
 
+let authPromptShown = false;
 async function api<T = any>(path: string, body?: unknown, raw = false): Promise<T> { const res = await fetch(`${backendOrigin}/api${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${token}`, ...(body !== undefined ? { 'Content-Type': raw ? 'application/octet-stream' : 'application/json' } : {}) }, body: body === undefined ? undefined : raw ? body as BodyInit : JSON.stringify(body) }); const result = await res.json(); if (!res.ok) {
-    if (res.status === 401)
-        ($('settings') as HTMLDialogElement).showModal();
+    if (res.status === 401 && !authPromptShown) {
+        authPromptShown = true;
+        if (!$<HTMLDialogElement>('pair-dialog').open) $<HTMLDialogElement>('settings').showModal();
+    }
     throw new Error(result.error ?? 'Request failed');
 } return result; }
 function safe(task: () => Promise<unknown>) { return () => { void task().catch(e => notify(e.message, true)); }; }
@@ -90,10 +104,13 @@ function renderGlasses() {
     if (!state) return;
     const a = action(), fresh = !state.stale && Date.now() - state.account.at <= 5000;
     const content = recording ? 'RISKAVUE / LISTENING\n\nSay a short command.\nRelease to finish.' : overrideHold ? `OVERRIDE SOFT LOCK?\n\n${a?.detail ?? ''}\n\n${Date.now() - overrideHold.at >= 3000 ? 'Release to confirm override.' : 'Keep holding for 3 seconds.'}\nRelease early to cancel.` : silent.active && fresh ? silent.text() : display(state, page, a);
-    $('display').textContent = content; bridge?.update(content);
-    $('tap').textContent = !fresh ? 'Waiting for connection' : silent.active ? silent.buttonLabel() : a?.status === 'pending' ? a.kind === 'override' && a.payload.inputMethod === 'touch' ? 'Hold below to override' : 'Tap to confirm' : a ? 'Back to session' : 'Tap for actions';
-    $<HTMLButtonElement>('tap').disabled = !fresh;
-    $('control-help').textContent = !fresh ? 'Waiting for fresh account data. Actions are paused.' : silent.active ? silent.helpText() : a?.status === 'pending' ? 'Read the request above before confirming. Either arrow dismisses it without making the change.' : a ? 'Return to your overview to choose another action.' : 'Tap for actions opens a menu. Use the arrows to browse views, or swipe on the glasses.';
+    const rows = valueRows(content);
+    $('display').innerHTML = content.split('\n').map((line, index) => { const row = rows.find(r => r.line === index); return row ? `<span class="hud-row"><span>${esc(row.label)}</span><span>${esc(row.value)}</span></span>` : /^-{40}$/.test(line) ? '<span class="hud-divider" aria-hidden="true"></span>' : esc(line); }).join('\n'); bridge?.update(content);
+    document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach(button => { button.setAttribute('aria-pressed', String(button.dataset.view === page)); button.disabled = silent.active || a?.status === 'pending'; });
+    $('tap').textContent = !fresh ? 'Waiting for connection' : silent.active ? silent.buttonLabel() : a?.status === 'pending' ? a.kind === 'override' && a.payload.inputMethod === 'touch' ? 'Hold below to override' : 'Tap to confirm' : a ? 'Back to session' : 'Nothing to confirm';
+    $<HTMLButtonElement>('tap').disabled = !fresh || (!silent.active && !a);
+    $('actions').hidden = !fresh || silent.active || !!a;
+    $('control-help').textContent = !fresh ? 'Waiting for fresh account data. Actions are paused.' : silent.active ? silent.helpText() : a?.status === 'pending' ? 'Read the request above before confirming. Either arrow dismisses it without making the change.' : a ? 'Return to your overview to choose another action.' : 'Choose Open actions menu here, or tap on the glasses. Arrows browse views; confirmation stays inactive until needed.';
     $('back').hidden = !silent.active && !a && page === 'session';
     $('back').textContent = a?.status === 'pending' ? 'Cancel request' : 'Back';
     if (!recording) $('voice').textContent = silent.active ? 'Hold to go back' : a?.kind === 'override' && a.status === 'pending' && a.payload.inputMethod === 'touch' ? 'Hold 3 seconds to override' : 'Hold to speak (optional)';
@@ -135,7 +152,10 @@ function connect() { clearTimeout(reconnect); socket?.close(); const ws = new We
 } }; ws.onerror = () => { }; }
 $('ticket').onsubmit = e => { e.preventDefault(); void (async () => { const f = new FormData(e.target as HTMLFormElement); const a = await api<Action>('/ticket', { symbol: f.get('symbol'), side: f.get('side'), qty: Number(f.get('qty')), entry: Number(f.get('entry')), stop: Number(f.get('stop')) }); selected = a.id; await load(); })().catch(e => notify(e.message, true)); };
 $('tap').onclick = safe(confirm);
-$('back').onclick = safe(async () => { if (silent.active) { silent.goBack(); return; } if (action()?.status === 'pending') await dismiss(); selected = undefined; page = 'session'; render(); });
+document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach(button => { button.onclick = () => { if (silent.active || action()?.status === 'pending') return; selected = undefined; page = button.dataset.view as Page; render(); }; });
+$('actions').onclick = () => { if (state && !state.stale && Date.now() - state.account.at <= 5000) silent.open(); };
+async function goBack() { if (silent.active) { silent.goBack(); return; } if (action()?.status === 'pending') await dismiss(); selected = undefined; page = 'session'; render(); }
+$('back').onclick = safe(goBack);
 $('previous').onclick = safe(() => navigate(-1));
 $('next').onclick = safe(() => navigate(1));
 $('lock').onclick = safe(async () => { selected = (await api<Action>('/action', { kind: 'lock' })).id; await load(); });
@@ -228,7 +248,16 @@ $('voice').onkeydown = e => { if (e.code === 'Space' && !e.repeat) {
 } };
 $('voice').onkeyup = e => { if (e.code === 'Space')
     void endControlHold().catch(e => notify(e.message, true)); };
-void glasses(event => { if (event === 'active') {
+void glasses(event => { if (event === 'back') {
+    void goBack().catch(e => notify(e.message, true)); return;
+} if (event === 'actions') {
+    // The native menu pauses WebView timers; refresh before checking freshness.
+    void load().then(() => {
+        if (action()?.status === 'pending') { notify('Confirm or cancel the current request first.'); return; }
+        if (state && !state.stale && Date.now() - state.account.at <= 5000) { selected = undefined; silent.open(); }
+    }).catch(e => notify(e.message, true));
+    return;
+} if (event === 'active') {
     g2Active = true;
     return;
 } if (event === 'inactive') {

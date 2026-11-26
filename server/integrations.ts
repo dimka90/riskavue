@@ -48,9 +48,9 @@ export function pairingReply(pairing: Pairing, text: string, user: string): stri
     const match = text.trim().match(/^\/pair(?:@\w+)?(?:\s+(.*))?$/i);
     if (!match) return null;
     const code = match[1]?.trim() ?? '';
-    if (!/^\d{6}$/.test(code)) return 'Pairing needs all six digits. Copy the full /pair command from Riskavue and send it again.';
+    if (!/^\d{6}$/.test(code)) return 'That code is wrong or has expired. Get a new code on the glasses and try again.';
     try { return pairing.complete(code, user); }
-    catch { return 'Pairing code expired or invalid. Get a new code in Riskavue and send it from your configured Telegram account.'; }
+    catch { return 'That code is wrong or has expired. Get a new code on the glasses and try again.'; }
 }
 export async function makeReview(service: Service) {
     if (!config.anthropic)
@@ -103,7 +103,7 @@ export function voiceCommand(service: Service, text: string, held: boolean) {
         return service.propose('breakeven', `Move ${move[1].toUpperCase()} stop to break-even?`, 'Tap to confirm; existing protection stays until replacement is accepted.', { symbol: move[1].toUpperCase() + 'USDT' });
     throw new Error('Say “close all”, “lock me”, “why locked”, “move stop BTC”, or “override: [reason]”');
 }
-export function telegram(service: Service, pairing: Pairing) {
+export function telegram(service: Service, pairing: Pairing, startPolling = true) {
     if (!config.telegram)
         return undefined;
     const bot = new Bot(config.telegram);
@@ -161,6 +161,6 @@ export function telegram(service: Service, pairing: Pairing) {
     service.on('action-result', (a: Action) => { const id = owner(), message = service.store.get<number>(`tg:${a.id}`); if (id && message)
         void updateMessage(id, message, actionText(a)).catch(() => { }); });
     bot.catch(() => service.store.log('telegram', 'Bot update failed'));
-    void bot.start({ onStart: () => { service.integrations.telegram = true; service.publish(); } }).catch(() => { service.integrations.telegram = false; service.store.log('telegram', 'Bot could not connect'); service.publish(); });
+    if (startPolling) void bot.start({ onStart: () => { service.integrations.telegram = true; service.publish(); } }).catch(() => { service.integrations.telegram = false; service.store.log('telegram', 'Bot could not connect'); service.publish(); });
     return bot;
 }

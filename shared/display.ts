@@ -1,10 +1,14 @@
 import type { Action, Snapshot } from './types.ts';
 import { deadline } from './session-text.ts';
 export type Page = 'session' | 'positions' | 'rules' | 'review';
+const rule = '-'.repeat(40);
+function row(label: string, value: string) { return label + ' '.repeat(Math.max(2, 40 - label.length - value.length)) + value; }
+function screen(title: string, lines: string[], footer = 'Tap: actions  /  Swipe: views') { return [title, rule, ...lines, rule, footer].join('\n'); }
+
 export function display(s: Snapshot, page: Page, action?: Action, now = Date.now()) {
     const prefix = s.account.mode === 'paper' ? 'PAPER DEMO' : 'BINANCE DEMO';
     if (s.stale || now - s.account.at > 5000)
-        return `${prefix} / RISKAVUE\n\nCONNECTION LOST\nAccount data is stale.\nActions paused until reconnected.`;
+        return screen(`RISKAVUE / ${prefix}`, ['CONNECTION LOST', '', 'Waiting for fresh account data.', 'Balance hidden. Actions paused.', '', 'Check your server connection.'], 'Reconnect before taking action');
     if (action) {
         if (action.kind === 'lock' && action.status === 'done' && s.lock && s.lock.until > now)
             return display(s, 'session', undefined, now);
@@ -20,15 +24,24 @@ export function display(s: Snapshot, page: Page, action?: Action, now = Date.now
     }
     if (s.lock && s.lock.until > now && page === 'session') {
         const end = deadline(s.lock.until, s.rules.timezone, now);
-        return `SESSION LOCKED / ${prefix}\n\nNew Riskavue trades blocked\nUntil ${end.time} (in ${end.remaining})\n\n$${s.risk?.remaining.toFixed(2) ?? '—'} loss allowance\nProtective stops kept\n${s.lock.hard ? 'Hard limit reached / no override' : s.lock.reason === 'You requested a session lock' ? 'You requested this lock' : s.lock.reason}\n${s.baseline?.estimated ? 'Estimated since app start\n' : ''}Tap = actions`;
+        const reason = s.lock.hard ? 'Hard limit / override unavailable' : s.lock.reason === 'You requested a session lock' ? 'You requested this lock' : s.lock.reason.replace('Your rule: stop after ', '').replace('Your rule: ', '').replace('consecutive losses', 'losses in a row');
+        return screen(`SESSION LOCKED / ${prefix}`, ['New Riskavue trades blocked', `Until ${end.time} (in ${end.remaining})`, 'Protective stops kept', reason, row('LOSS ALLOWANCE', `$${s.risk?.remaining.toFixed(2) ?? '—'}`), s.baseline?.estimated ? 'Estimated since app start' : 'Tracked from session start']);
     }
     if (page === 'positions')
         return `${prefix} / POSITIONS\n\n${s.account.positions.map(p => `${p.symbol} ${p.qty > 0 ? 'LONG' : 'SHORT'} ${Math.abs(p.qty)}\nStop ${p.stop ?? 'UNKNOWN'} | P/L $${(p.qty * (p.mark - p.entry)).toFixed(2)}`).join('\n') || 'No open positions'}\n\nSwipe to change view.`;
     if (page === 'rules')
-        return `${prefix} / YOUR RULES\n\n${s.rules.name}\nDaily ${s.rules.dailyPct * 100}% / max ${s.rules.maxPct * 100}%\n${s.rules.maxLosses} ${s.rules.lossMode} losses = lock\n${s.rules.maxTrades} trades per session\n${s.baseline?.estimated ? 'Baseline estimated since app start.' : ''}\nOnly Riskavue trades can be blocked.`;
+        return screen(`YOUR RULES / ${prefix}`, [row('DAILY LOSS LIMIT', `${s.rules.dailyPct * 100}%`), row('OVERALL LOSS LIMIT', `${s.rules.maxPct * 100}%`), row('TRADES PER SESSION', String(s.rules.maxTrades)), row(s.rules.lossMode === 'consecutive' ? 'LOSSES IN A ROW' : 'LOSSES PER SESSION', `${s.rules.maxLosses} = lock`), 'Edit rules in the companion.', 'Applies to Riskavue entries only.']);
     if (page === 'review')
         return `${prefix} / SESSION REVIEW\n\n${s.review || 'Tap for actions, then Session review.'}`.slice(0, 460);
     const remaining = s.risk?.remaining;
-    const mins = Math.max(0, Math.floor((s.resetAt - now) / 60000));
-    return `${prefix} / RISKAVUE\n\n${remaining === undefined ? 'Waiting for account' : `$${remaining.toFixed(0)} loss allowance`}\n\n${s.rules.maxTrades - (s.baseline?.trades ?? 0)} trades left / resets ${Math.floor(mins / 60)}h ${mins % 60}m\n${s.risk?.unknown[0] ?? (s.risk?.warning ? 'Inside your warning buffer' : 'Within your configured limits')}\n${s.baseline?.estimated ? 'Estimated since app start.' : ''}\n\nTap = actions / swipe = views`;
+    const end = deadline(s.resetAt, s.rules.timezone, now);
+    const losses = s.rules.lossMode === 'consecutive' ? s.baseline?.streak : s.baseline?.losses;
+    return screen(`RISKAVUE / ${prefix}`, [
+        row('LOSS ALLOWANCE', remaining === undefined ? '—' : `$${remaining.toFixed(2)}`),
+        row('TRADES LEFT', `${Math.max(0, s.rules.maxTrades - (s.baseline?.trades ?? 0))} / ${s.rules.maxTrades}`),
+        row(s.rules.lossMode === 'consecutive' ? 'LOSSES IN A ROW' : 'LOSSES THIS SESSION', `${losses ?? 0} / ${s.rules.maxLosses}`),
+        row('RESET', `${end.time} / ${end.remaining}`),
+        s.risk?.unknown[0] ?? (s.risk?.warning ? 'LOW ALLOWANCE / inside warning buffer' : 'Within your configured limits'),
+        s.baseline?.estimated ? 'Estimated since app start' : 'Tracked from session start'
+    ]);
 }

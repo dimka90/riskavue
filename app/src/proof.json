@@ -1,0 +1,69 @@
+{
+  "environment": "Binance Futures Demo",
+  "runs": [
+    {
+      "source": "binance-verification.json",
+      "sha256": "5b44c722e93a6cbf8110d92e4534cc2c8c2b01e636c15e2129199990e58298f0",
+      "events": [
+        {
+          "at": "2026-11-24T20:59:41.152Z",
+          "step": "oversized-ticket-rejected",
+          "description": "Oversized ticket rejected; exchange orders: 0."
+        },
+        {
+          "at": "2026-11-24T20:59:45.221Z",
+          "step": "allowed-ticket-awaits-confirmation",
+          "description": "Allowed ticket stayed unsent until confirmation."
+        },
+        {
+          "at": "2026-11-24T20:59:53.184Z",
+          "step": "entry-and-protective-stop-confirmed",
+          "description": "Demo entry and protective stop accepted.",
+          "order": "28694211519"
+        },
+        {
+          "at": "2026-11-24T20:59:54.819Z",
+          "step": "repeated-confirmation-did-not-duplicate-order",
+          "description": "Repeated confirmation did not create another order."
+        },
+        {
+          "at": "2026-11-24T21:00:00.972Z",
+          "step": "cancellation-confirmed",
+          "description": "Cancellation confirmed."
+        },
+        {
+          "at": "2026-11-24T21:00:05.828Z",
+          "step": "cleanup-confirmed",
+          "description": "Cleanup confirmed: 0 positions and 0 orders."
+        }
+      ]
+    },
+    {
+      "source": "binance-close-verification.json",
+      "sha256": "b89014335517f6eb7303a3d3ce1a249d0c33a40782c926237917492a86651430",
+      "events": [
+        {
+          "at": "2026-11-24T21:14:01.029Z",
+          "step": "outside-demo-fixture-filled",
+          "description": "Outside demo fixture filled before Riskavue could block it.",
+          "order": "28694222135"
+        },
+        {
+          "at": "2026-11-24T21:14:03.727Z",
+          "step": "watcher-proposed-close",
+          "description": "Watcher reported “already filled” and proposed a close."
+        },
+        {
+          "at": "2026-11-24T21:14:08.109Z",
+          "step": "reduce-only-close-filled",
+          "description": "Confirmed reduce-only close filled."
+        },
+        {
+          "at": "2026-11-24T21:14:13.689Z",
+          "step": "cleanup-confirmed",
+          "description": "Cleanup confirmed: 0 positions and 0 orders."
+        }
+      ]
+    }
+  ]
+}
