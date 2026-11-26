@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { deadline, lockedText } from '../shared/session-text.ts';
 import type { Account, Action, ActionKind, Baseline, Lock, Rules, Snapshot, Ticket } from '../shared/types.ts';
+import { STALE_MS } from '../shared/types.ts';
 import { applyFill, initialInventory, type Inventory } from './ledger.ts';
 import { Store } from './store.ts';
 import { type Exchange, Paper, UncertainExecution } from './exchange.ts';
@@ -28,7 +29,7 @@ export class Service extends EventEmitter {
         this.review = store.get<string>('review') ?? '';
         this.account = { wallet: 0, equity: 0, positions: [], orders: [], at: 0, mode: exchange.mode, connected: false };
     }
-    snapshot(): Snapshot { const now = Date.now(); return { account: this.account, baseline: this.baseline, rules: this.rules, risk: this.baseline ? riskFor(this.account, this.baseline, this.rules) : null, lock: this.lock && this.lock.until > now ? this.lock : null, actions: this.store.actions(), decisions: this.store.decisions(), resetAt: tradingDay(now, this.rules).resetAt, stale: !this.account.connected || now - this.account.at > 5000, integrations: this.integrations, review: this.review, glassesActive: this.activeUntil > now }; }
+    snapshot(): Snapshot { const now = Date.now(); return { account: this.account, baseline: this.baseline, rules: this.rules, risk: this.baseline ? riskFor(this.account, this.baseline, this.rules) : null, lock: this.lock && this.lock.until > now ? this.lock : null, actions: this.store.actions(), decisions: this.store.decisions(), resetAt: tradingDay(now, this.rules).resetAt, stale: !this.account.connected || now - this.account.at > STALE_MS, integrations: this.integrations, review: this.review, glassesActive: this.activeUntil > now }; }
     publish() { this.emit('state', this.snapshot()); }
     async start() { await this.refresh(); if (this.exchange.start)
         void this.exchange.start(() => { if (Date.now() - this.lastAttemptAt > 1800) {

@@ -23,7 +23,7 @@ test('first demo connection uses actual starting balance without overriding save
     assert.equal(restarted.rules.initialBalance, 4500);
     store.close();
 });
-test('R1 stale account hides balance and blocks action', async () => { const { service, store } = await setup(); service.account.at = Date.now() - 6000; assert.match(display(service.snapshot(), 'session'), /CONNECTION LOST/); assert.throws(() => service.ticket({ symbol: 'BTCUSDT', side: 'BUY', qty: .01, entry: 60000, stop: 59000 }), /Fresh/); store.close(); });
+test('R1 stale account hides balance and blocks action', async () => { const { service, store } = await setup(); service.account.at = Date.now() - 16000; assert.match(display(service.snapshot(), 'session'), /CONNECTION LOST/); assert.throws(() => service.ticket({ symbol: 'BTCUSDT', side: 'BUY', qty: .01, entry: 60000, stop: 59000 }), /Fresh/); store.close(); });
 test('slow history reconciliation does not publish an already-stale account', async () => {
     const originalNow = Date.now;
     let now = originalNow(); Date.now = () => now;

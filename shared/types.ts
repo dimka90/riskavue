@@ -128,3 +128,6 @@ export interface Preset {
     checked?: string;
     rules: Partial<Rules>;
 }
+
+/** Account data older than this is treated as stale (actions paused, balance hidden). */
+export const STALE_MS = 15000;

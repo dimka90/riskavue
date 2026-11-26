@@ -1,3 +1,4 @@
+import { STALE_MS } from './types.ts';
 import type { Action, Snapshot } from './types.ts';
 
 export function deadline(until: number, timezone: string, now = Date.now()) {
@@ -18,7 +19,7 @@ export function lockedText(s: Snapshot, already = false, now = Date.now()) {
 export function telegramStatus(s: Snapshot, now = Date.now()) {
     const mode = s.account.mode === 'paper' ? 'PAPER DEMO' : 'BINANCE DEMO';
     const locked = s.lock && s.lock.until > now;
-    const stale = s.stale || now - s.account.at > 5000;
+    const stale = s.stale || now - s.account.at > STALE_MS;
     const value = s.risk ? `$${s.risk.remaining.toFixed(2)} to floor` : 'Waiting for account data';
     const scope = s.baseline?.estimated ? '\nFloor estimated since app start.' : '';
     if (locked) return `LOCKED · new trades blocked\nUntil ${deadline(s.lock!.until, s.rules.timezone, now).full}\n\n${stale ? 'Connection lost · balance hidden' : value} · protective stops kept\n${s.lock!.reason}\n\n${mode} · applies to Riskavue entries${scope}`;

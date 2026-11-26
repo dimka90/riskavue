@@ -5,6 +5,7 @@ import { SilentControls } from './silent-controls.ts';
 import { enhanceTradeSelects } from './trade-select.ts';
 import { deadline, actionText } from '../../shared/session-text.ts';
 import type { Snapshot, Action, Preset, Rules } from '../../shared/types.ts';
+import { STALE_MS } from '../../shared/types.ts';
 import { display, type Page } from '../../shared/display.ts';
 import { glasses } from './glasses.ts';
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -59,7 +60,7 @@ function render() {
     if (!state)
         return;
     const s = state;
-    const stale = s.stale || Date.now() - s.account.at > 5000;
+    const stale = s.stale || Date.now() - s.account.at > STALE_MS;
     $('mode').textContent = s.account.mode === 'paper' ? 'PAPER DEMO' : 'BINANCE DEMO';
     $('paper-panel').hidden = s.account.mode !== 'paper';
     $('connection').textContent = stale ? 'Connection lost' : s.lock ? 'Session locked' : 'Connected';
@@ -102,7 +103,7 @@ function render() {
 }
 function renderGlasses() {
     if (!state) return;
-    const a = action(), fresh = !state.stale && Date.now() - state.account.at <= 5000;
+    const a = action(), fresh = !state.stale && Date.now() - state.account.at <= STALE_MS;
     const content = recording ? 'RISKAVUE / LISTENING\n\nSay a short command.\nRelease to finish.' : overrideHold ? `OVERRIDE SOFT LOCK?\n\n${a?.detail ?? ''}\n\n${Date.now() - overrideHold.at >= 3000 ? 'Release to confirm override.' : 'Keep holding for 3 seconds.'}\nRelease early to cancel.` : silent.active && fresh ? silent.text() : display(state, page, a);
     const rows = valueRows(content);
     $('display').innerHTML = content.split('\n').map((line, index) => { const row = rows.find(r => r.line === index); return row ? `<span class="hud-row"><span>${esc(row.label)}</span><span>${esc(row.value)}</span></span>` : /^-{40}$/.test(line) ? '<span class="hud-divider" aria-hidden="true"></span>' : esc(line); }).join('\n'); bridge?.update(content);
@@ -116,7 +117,7 @@ function renderGlasses() {
     if (!recording) $('voice').textContent = silent.active ? 'Hold to go back' : a?.kind === 'override' && a.status === 'pending' && a.payload.inputMethod === 'touch' ? 'Hold 3 seconds to override' : 'Hold to speak (optional)';
 }
 async function confirm(held = false) {
-    if (!state || state.stale || Date.now() - state.account.at > 5000) return;
+    if (!state || state.stale || Date.now() - state.account.at > STALE_MS) return;
     if (silent.active) { await silent.tap(); return; }
     const a = action();
     if (!a) { silent.open(); return; }
@@ -153,7 +154,7 @@ function connect() { clearTimeout(reconnect); socket?.close(); const ws = new We
 $('ticket').onsubmit = e => { e.preventDefault(); void (async () => { const f = new FormData(e.target as HTMLFormElement); const a = await api<Action>('/ticket', { symbol: f.get('symbol'), side: f.get('side'), qty: Number(f.get('qty')), entry: Number(f.get('entry')), stop: Number(f.get('stop')) }); selected = a.id; await load(); })().catch(e => notify(e.message, true)); };
 $('tap').onclick = safe(confirm);
 document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach(button => { button.onclick = () => { if (silent.active || action()?.status === 'pending') return; selected = undefined; page = button.dataset.view as Page; render(); }; });
-$('actions').onclick = () => { if (state && !state.stale && Date.now() - state.account.at <= 5000) silent.open(); };
+$('actions').onclick = () => { if (state && !state.stale && Date.now() - state.account.at <= STALE_MS) silent.open(); };
 async function goBack() { if (silent.active) { silent.goBack(); return; } if (action()?.status === 'pending') await dismiss(); selected = undefined; page = 'session'; render(); }
 $('back').onclick = safe(goBack);
 $('previous').onclick = safe(() => navigate(-1));
@@ -254,7 +255,7 @@ void glasses(event => { if (event === 'back') {
     // The native menu pauses WebView timers; refresh before checking freshness.
     void load().then(() => {
         if (action()?.status === 'pending') { notify('Confirm or cancel the current request first.'); return; }
-        if (state && !state.stale && Date.now() - state.account.at <= 5000) { selected = undefined; silent.open(); }
+        if (state && !state.stale && Date.now() - state.account.at <= STALE_MS) { selected = undefined; silent.open(); }
     }).catch(e => notify(e.message, true));
     return;
 } if (event === 'active') {
@@ -272,7 +273,7 @@ void glasses(event => { if (event === 'back') {
     chunks.push(new Uint8Array(bytes)); }, status => { $('g2').textContent = status; }).then(b => { bridge = b; g2Active = true; renderGlasses(); }).catch(() => { $('g2').textContent = 'Browser preview'; });
 setInterval(() => { if (state) {
     renderGlasses();
-    if (Date.now() - state.account.at > 5000) {
+    if (Date.now() - state.account.at > STALE_MS) {
         state.stale = true;
         render();
     }

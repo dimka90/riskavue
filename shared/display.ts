@@ -1,4 +1,5 @@
 import type { Action, Snapshot } from './types.ts';
+import { STALE_MS } from './types.ts';
 import { deadline } from './session-text.ts';
 export type Page = 'session' | 'positions' | 'rules' | 'review';
 const rule = '-'.repeat(40);
@@ -7,7 +8,7 @@ function screen(title: string, lines: string[], footer = 'Tap: actions  /  Swipe
 
 export function display(s: Snapshot, page: Page, action?: Action, now = Date.now()) {
     const prefix = s.account.mode === 'paper' ? 'PAPER DEMO' : 'BINANCE DEMO';
-    if (s.stale || now - s.account.at > 5000)
+    if (s.stale || now - s.account.at > STALE_MS)
         return screen(`RISKAVUE / ${prefix}`, ['CONNECTION LOST', '', 'Waiting for fresh account data.', 'Balance hidden. Actions paused.', '', 'Check your server connection.'], 'Reconnect before taking action');
     if (action) {
         if (action.kind === 'lock' && action.status === 'done' && s.lock && s.lock.until > now)
